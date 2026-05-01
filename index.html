@@ -1,12 +1,195 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Portfolio - Maxime</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="CSS/style.css" />
 </head>
 <body>
-  <h1>Bienvenue sur mon portfolio</h1>
-  <p>En construction 🚧</p>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <h2>Maxime Leroux</h2>
+    <ul>
+      <li><a href="#about">À propos</a></li>
+      <li><a href="#projects">Projets</a></li>
+      <li><a href="#skills">Compétences</a></li>
+      <li><a href="#experience">Expérience</a></li>
+      <li><a href="#education">Formation</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1>Développeur</h1>
+        <p class="hero-subtitle">Étudiant en L2 Informatique</p>
+        <p class="hero-description">Passionné par les nouvelles technologies <br> Cherche emploi étudiant</p>
+        <div class="hero-cta">
+          <a href="#projects" class="btn btn-primary">Voir mes projets</a>
+          <a href="#contact" class="btn btn-secondary">Me contacter</a>
+        </div>
+        <div class="hero-tech">
+          <p class="tech-label">Technologies :</p>
+          <div class="tech-tags">
+            <span class="tech-tag">Python</span>
+            <span class="tech-tag">JavaScript</span>
+            <span class="tech-tag">C</span>
+            <span class="tech-tag">HTML/CSS</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-image">
+        <img src="Images/Profil.jpg" alt="Maxime Leroux - Développeur">
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="section">
+    <h2>À propos</h2>
+    <p>
+      Étudiant en deuxième année de licence en informatique, motivé et sérieux,
+      je souhaite trouver un emploi étudiant en parallèle de mes études. 
+      Intéressé par les nouvelles technologies et le développement informatique, 
+      je fais preuve de rigueur, d’autonomie et d’une bonne capacité d’apprentissage. 
+      Je projette de poursuivre mes études jusqu’au doctorat en intelligence artificielle. 
+      Curieux et investi, je m’inscris dans une démarche d’apprentissage continu 
+      afin de développer constamment mes compétences.
+    </p>
+  </section>
+
+  <!-- PROJECT -->
+  <section id="projects" class="section">
+    <h2>Projet</h2>
+
+    <div class="project-card">
+      <h3>Silence Stellaire</h3>
+      <p>
+        Jeu développé en équipe de 3 dans le cadre de la L2 informatique.
+        Le projet met en avant la logique de jeu, la collaboration et la gestion de projet.
+        Expérience enrichissante en travail collaboratif et gestion de projet Agile.
+      </p>
+
+      <p class="tech"><strong>Technologies :</strong> Uniquement en C </p>
+      <p class="tech"><strong>Durée :</strong> Projet académique de 3 mois</p>
+      <p class="tech"><strong>Équipe :</strong> 3 développeurs</p>
+
+      <div class="buttons">
+        <a href="https://github.com/Mateoraison/Silence-Stellaire" target="_blank" class="btn-link">📂 Voir le code</a>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills" class="section">
+    <h2>Compétences</h2>
+    <div class="skills-grid">
+      <div class="skill-category">
+        <h3>Langages</h3>
+        <ul>
+          <li>Python</li>
+          <li>JavaScript</li>
+          <li>C</li>
+          <li>HTML / CSS</li>
+          <li>PHP</li>
+          <li>Prolog</li>
+        </ul>
+      </div>
+      <div class="skill-category">
+        <h3>Outils & Technologies</h3>
+        <ul>
+          <li>Git / GitHub</li>
+          <li>Unix / Linux</li>
+          <li>Gestion de projet</li>
+          <li>Travail collaboratif</li>
+        </ul>
+      </div>
+      <div class="skill-category">
+        <h3>Qualités</h3>
+        <ul>
+          <li>Persévérant</li>
+          <li>Rigoureux</li>
+          <li>Curieux</li>
+          <li>Autonome</li>
+          <li>Bon communicant</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPERIENCE -->
+  <section id="experience" class="section">
+    <h2>Expérience Professionnelle</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <h3>Employé polyvalent - Carrefour Market</h3>
+        <p class="date">Février 2025 - Aujourd'hui</p>
+        <p>Emploi étudiant en parallèle des études.</p>
+      </div>
+      <div class="timeline-item">
+        <h3>Intérimaire - PUSTERLA (via Addeco)</h3>
+        <p class="date">Juillet - Août 2024</p>
+        <p>Missions diverses en production.</p>
+      </div>
+      <div class="timeline-item">
+        <h3>Travaux agricoles - Castrage de maïs</h3>
+        <p class="date">Juillet 2021 / 2022 / 2023</p>
+        <p>Exploitation agricole Mr LEROUX, Pontvallain.</p>
+      </div>
+      <div class="timeline-item">
+        <h3>Observation professionnelle - EAPS</h3>
+        <p class="date">Janvier 2021</p>
+        <p>Découverte du monde professionnel.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDUCATION -->
+  <section id="education" class="section">
+    <h2>Formation</h2>
+    <div class="education-grid">
+      <div class="edu-card">
+        <h3>Licence en Informatique</h3>
+        <p class="date">Université du Mans (En cours L2)</p>
+        <p>Apprentissage : C, Python, JS, HTML/CSS/PHP, Prolog, Unix</p>
+      </div>
+      <div class="edu-card">
+        <h3>Baccalauréat Général</h3>
+        <p class="date">2024</p>
+        <p>Spécialités : NSI (Numérique & Sciences Informatiques), Mathématiques</p>
+      </div>
+      <div class="edu-card">
+        <h3>Diplôme de Premier Secours PSC1</h3>
+        <p class="date">2024</p>
+      </div>
+      <div class="edu-card">
+        <h3>Diplôme National du Brevet</h3>
+        <p class="date">2021</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="section">
+    <h2>Contact</h2>
+    <div class="contact-info">
+      <p><strong>Email :</strong> <a href="mailto:maximeleroux99@gmail.com">maximeleroux99@gmail.com</a></p>
+      <p><strong>Téléphone :</strong> 07 71 05 28 03</p>
+      <p><strong>Adresse :</strong> 37 Boulevard Georges Méliés, Le Mans 72000</p>
+      <p><strong>GitHub :</strong> <a href="https://github.com/OniZurKa" target="_blank">github.com/OniZurKa</a></p>
+      <p><strong>Permis :</strong> Permis B + Véhicule</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2025 Maxime Leroux - Développeur | Étudiant en L2 Informatique</p>
+  </footer>
+
+  <script src="JS/script.js"></script>
 </body>
 </html>
