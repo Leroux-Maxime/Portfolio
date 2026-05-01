@@ -211,7 +211,7 @@ body {
     transform: translateY(-20px);
   }
 }
-}
+
 
 /* SECTIONS */
 .section {
@@ -487,5 +487,4 @@ footer {
     gap: 10px;
     font-size: 0.9rem;
   }
-}
 }
