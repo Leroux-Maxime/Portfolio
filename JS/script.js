@@ -29,3 +29,50 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     }
   });
 });
+
+// Mobile burger menu
+const navbar = document.querySelector('.navbar');
+const menuToggle = document.querySelector('.menu-toggle');
+const navLinks = document.querySelectorAll('.navbar ul a');
+const navOverlay = document.querySelector('.nav-overlay');
+
+if (navbar && menuToggle) {
+  const closeMenu = () => {
+    navbar.classList.remove('nav-open');
+    menuToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  menuToggle.addEventListener('click', () => {
+    const isOpen = navbar.classList.toggle('nav-open');
+    menuToggle.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', closeMenu);
+  });
+
+  if (navOverlay) {
+    navOverlay.addEventListener('click', closeMenu);
+  }
+
+  document.addEventListener('click', event => {
+    const clickedInsideNav = navbar.contains(event.target);
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile && navbar.classList.contains('nav-open') && !clickedInsideNav) {
+      closeMenu();
+    }
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && navbar.classList.contains('nav-open')) {
+      closeMenu();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      closeMenu();
+    }
+  });
+}

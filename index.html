@@ -11,8 +11,15 @@
 
   <!-- NAV -->
   <nav class="navbar">
-    <h2>Maxime Leroux</h2>
-    <ul>
+    <div class="navbar-head">
+      <h2>Maxime Leroux</h2>
+      <button class="menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <ul id="nav-links">
       <li><a href="#about">À propos</a></li>
       <li><a href="#projects">Projets</a></li>
       <li><a href="#skills">Compétences</a></li>
@@ -21,6 +28,7 @@
       <li><a href="#contact">Contact</a></li>
     </ul>
   </nav>
+  <div class="nav-overlay" aria-hidden="true"></div>
 
 
   <!-- HERO -->
@@ -83,7 +91,7 @@
       <p class="tech"><strong>Équipe :</strong> 3 développeurs</p>
 
       <div class="buttons">
-        <a href="https://github.com/Mateoraison/Silence-Stellaire" target="_blank" class="btn-link">📂 Voir le code</a>
+        <a href="https://github.com/Mateoraison/Silence-Stellaire" target="_blank" class="btn-link">Voir le code</a>
       </div>
     </div>
 
