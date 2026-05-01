@@ -220,6 +220,10 @@ body {
   margin: auto;
 }
 
+[id] {
+  scroll-margin-top: 110px;
+}
+
 /* PROJECT CARD */
 .project-card {
   background: #1e293b;
@@ -428,28 +432,73 @@ footer {
   transform: translateY(0);
 }
 
+@media (max-width: 992px) {
+  .hero-content {
+    gap: 40px;
+  }
+
+  .hero-text h1 {
+    font-size: 3rem;
+  }
+
+  .hero-image {
+    width: 300px;
+    height: 300px;
+  }
+}
+
 /* RESPONSIVE */
 @media (max-width: 768px) {
+  :root {
+    --page-gutter: 12px;
+  }
+
+  .navbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 0 0 10px 10px;
+  }
+
+  .navbar h2 {
+    font-size: 1.05rem;
+    text-align: center;
+  }
+
+  .navbar ul {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .navbar a {
+    display: block;
+    text-align: center;
+    font-size: 0.82rem;
+    padding: 6px 4px;
+    border-radius: 8px;
+    background: rgba(56, 189, 248, 0.08);
+  }
+
   .hero-text h1 {
     font-size: 2.2rem;
   }
 
-  .navbar {
-    padding: 15px 20px;
-  }
-  
   .section {
-    padding: 60px 0;
+    padding: 52px 0;
   }
   
   .skills-grid,
   .education-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
   
   .hero {
     padding: 0;
-    margin-top: 80px;
+    margin-top: 150px;
     height: auto;
   }
   
@@ -463,28 +512,73 @@ footer {
   .hero-text {
     max-width: 100%;
   }
+
+  .hero-description {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
   
   .hero-image {
-    width: 250px;
-    height: 250px;
+    width: 220px;
+    height: 220px;
   }
   
   .hero-cta {
     flex-direction: column;
     justify-content: center;
+    width: 100%;
+    margin-bottom: 24px;
   }
   
   .btn {
     width: 100%;
     text-align: center;
   }
+
+  .project-card,
+  .skill-category,
+  .timeline-item,
+  .edu-card,
+  .contact-info {
+    padding: 16px;
+  }
+
+  .section h2 {
+    font-size: 1.8rem;
+    margin-bottom: 22px;
+  }
   
   .tech-tags {
     justify-content: center;
   }
-  
+
+  .timeline-item:hover,
+  .project-card:hover,
+  .skill-category:hover,
+  .edu-card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
   .navbar ul {
-    gap: 10px;
-    font-size: 0.9rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hero {
+    margin-top: 188px;
+  }
+
+  .hero-text h1 {
+    font-size: 1.95rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.05rem;
+  }
+
+  .hero-image {
+    width: 190px;
+    height: 190px;
   }
 }
