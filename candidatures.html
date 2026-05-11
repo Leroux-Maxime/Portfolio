@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JobTracker — Suivi de candidatures</title>
+  <meta name="description" content="Application de suivi de candidatures professionnelles" />
+
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="css/style2.css" />
+</head>
+<body>
+
+  <!-- ── APP SHELL ── -->
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <i class="ti ti-briefcase" aria-hidden="true"></i>
+        <span>JobTracker</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="list" onclick="App.setView('list', this)">
+          <i class="ti ti-list" aria-hidden="true"></i>
+          <span>Liste</span>
+        </button>
+        <button class="nav-item" data-view="kanban" onclick="App.setView('kanban', this)">
+          <i class="ti ti-layout-columns" aria-hidden="true"></i>
+          <span>Kanban</span>
+        </button>
+        <button class="nav-item" data-view="stats" onclick="App.setView('stats', this)">
+          <i class="ti ti-chart-bar" aria-hidden="true"></i>
+          <span>Statistiques</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline btn-sm" onclick="App.exportCSV()">
+          <i class="ti ti-download" aria-hidden="true"></i>
+          Export CSV
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+
+      <!-- Top bar -->
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Mes candidatures</h1>
+          <p id="subline" class="text-muted">Chargement…</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary" onclick="App.openModal()">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+            Nouvelle candidature
+          </button>
+        </div>
+      </header>
+
+      <!-- KPI row -->
+      <div class="stats-row" id="statsRow"></div>
+
+      <!-- ── LIST VIEW ── -->
+      <section id="view-list" class="view active">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <input type="text" id="searchInput" placeholder="Poste, entreprise, ville…" oninput="App.renderList()" />
+          </div>
+          <select id="filterStatus" onchange="App.renderList()">
+            <option value="">Tous les statuts</option>
+            <option>Envoyé</option>
+            <option>Relancé</option>
+            <option>Entretien</option>
+            <option>Test technique</option>
+            <option>Offre reçue</option>
+            <option>Refus</option>
+            <option>Abandonné</option>
+          </select>
+          <select id="filterSort" onchange="App.renderList()">
+            <option value="date">Plus récent</option>
+            <option value="alpha">A → Z</option>
+            <option value="statut">Par statut</option>
+          </select>
+        </div>
+        <div class="tabs" id="tabsEl"></div>
+        <div class="cards-list" id="listView"></div>
+      </section>
+
+      <!-- ── KANBAN VIEW ── -->
+      <section id="view-kanban" class="view">
+        <div class="kanban-wrap">
+          <div class="kanban" id="kanbanEl"></div>
+        </div>
+      </section>
+
+      <!-- ── STATS VIEW ── -->
+      <section id="view-stats" class="view">
+        <div class="stats-charts">
+          <div class="chart-card">
+            <h3>Répartition par statut</h3>
+            <div class="chart-legend" id="chartLegend"></div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="chartBar" role="img" aria-label="Répartition des candidatures par statut"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Activité par mois</h3>
+            <div class="chart-wrap" style="height:180px">
+              <canvas id="chartLine" role="img" aria-label="Nombre de candidatures par mois"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="insights-row" id="statsInsights"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ── MODAL ── -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="App.closeModalBg(event)" role="dialog" aria-modal="true" aria-labelledby="modalTitleText">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitleText">Nouvelle candidature</h2>
+        <button class="btn-icon" onclick="App.closeModal()" aria-label="Fermer">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-field">
+            <label for="fPoste">Poste <span class="required">*</span></label>
+            <input id="fPoste" type="text" placeholder="Développeur Full Stack" />
+          </div>
+          <div class="form-field">
+            <label for="fEntreprise">Entreprise <span class="required">*</span></label>
+            <input id="fEntreprise" type="text" placeholder="Acme SAS" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="fVille">Ville</label>
+            <input id="fVille" type="text" placeholder="Paris" />
+          </div>
+          <div class="form-field">
+            <label for="fContrat">Contrat</label>
+            <select id="fContrat">
+              <option value="">—</option>
+              <option>CDI</option><option>CDD</option><option>Stage</option>
+              <option>Alternance</option><option>Freelance</option><option>Intérim</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="fSalaire">Salaire (€/an)</label>
+            <input id="fSalaire" type="text" placeholder="45 000" />
+          </div>
+          <div class="form-field">
+            <label for="fMode">Mode de travail</label>
+            <select id="fMode">
+              <option value="">—</option>
+              <option>Présentiel</option><option>Hybride</option><option>Télétravail</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="fDate">Date <span class="required">*</span></label>
+            <input id="fDate" type="date" />
+          </div>
+          <div class="form-field">
+            <label for="fStatut">Statut</label>
+            <select id="fStatut">
+              <option>Envoyé</option><option>Relancé</option><option>Entretien</option>
+              <option>Test technique</option><option>Offre reçue</option>
+              <option>Refus</option><option>Abandonné</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="fContact">Contact recruteur</label>
+          <input id="fContact" type="text" placeholder="Marie Dupont — RH" />
+        </div>
+        <div class="form-field">
+          <label for="fLien">Lien de l'offre</label>
+          <input id="fLien" type="url" placeholder="https://…" />
+        </div>
+        <div class="form-field">
+          <label for="fNotes">Notes</label>
+          <textarea id="fNotes" rows="3" placeholder="Motivations, prochaine étape, impressions…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="App.closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="App.saveJob()">
+          <i class="ti ti-check" aria-hidden="true"></i>
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
