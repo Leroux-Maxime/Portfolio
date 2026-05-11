@@ -45,7 +45,7 @@ Portfolio personnel moderne et responsive, construit pour presenter mon profil, 
 
 1. Cloner le depot
 2. Ouvrir le dossier du projet
-3. Lancer le fichier `portfolio.html` dans le navigateur
+3. Lancer le fichier `index.html` dans le navigateur
 
 Commande utile:
 
