@@ -1,10 +1,10 @@
-﻿<div align="center">
+﻿# Portfolio - Maxime Leroux
 
-# Portfolio - Maxime Leroux
+<div align="center">
 
 <p>
-  <strong>Developpeur web en formation (L2 Informatique)</strong><br/>
-  Passionne par la creation d'applications modernes et l'apprentissage continu.
+  <strong>Développeur web en formation (L2 Informatique)</strong><br/>
+  Portfolio personnel et applications front-end de démonstration.
 </p>
 
 <p>
@@ -17,77 +17,122 @@
 
 ---
 
-## Apercu
+## Vue d'ensemble
 
-Portfolio personnel moderne et responsive, construit pour presenter mon profil, mes competences, mes projets, mon parcours, et mes objectifs professionnels.
+Ce dépôt regroupe trois interfaces front-end distinctes:
 
-### Sections presentes
+1. le portfolio principal, qui présente mon profil, mes compétences, mon parcours et mes contacts;
+2. JobTracker, une application de suivi de candidatures;
+3. HoraireTracker, une application de suivi des horaires de travail.
 
-- Hero: presentation rapide avec photo, tagline et appels a l'action
-- A propos: mon objectif et ma vision de parcours
-- Projet: mise en avant de Silence Stellaire
-- Competences: langages, outils, qualites
-- Experience: timeline de mes experiences professionnelles
-- Formation: parcours universitaire et diplomes
-- Contact: email, GitHub et informations utiles
+Chaque projet reste indépendant, mais partage une structure simple et des fichiers explicites.
 
 ---
 
-## Stack technique
+## Portfolio principal
+
+Page d'accueil personnelle construite pour présenter mon profil et mes projets.
+
+### Sections présentes
+
+- Hero avec présentation rapide, photo et appels à l'action
+- À propos avec mon objectif et ma trajectoire d'études
+- Projet avec mise en avant de Silence Stellaire
+- Compétences avec langages, outils et qualités
+- Expérience avec ma chronologie professionnelle
+- Formation avec mes diplômes et mon cursus
+- Contact avec email et GitHub
+
+### Stack technique
 
 - HTML5
-- CSS3 (animations, responsive design, gradients)
-- JavaScript (animations d'apparition + smooth scroll)
+- CSS3 avec animations, gradients et responsive design
+- JavaScript pour les animations au scroll, le menu mobile et le fond animé
+
+### Fichiers associés
+
+- [index.html](index.html)
+- [CSS/portfolio.css](CSS/portfolio.css)
+- [JS/portfolio.js](JS/portfolio.js)
 
 ---
 
-## Lancer le projet localement
+## JobTracker
 
-1. Cloner le depot
-2. Ouvrir le dossier du projet
-3. Lancer le fichier `index.html` dans le navigateur
+Application web de suivi de candidatures professionnelles, entièrement côté client.
 
-Commande utile:
+### Fonctionnalités
 
-```bash
-git clone https://github.com/OniZurKa/Portfolio.git
-```
+- Vue liste avec cartes détaillées
+- Vue Kanban par statut
+- Vue statistiques avec graphiques
+- Filtres, tri et recherche
+- Export CSV
+- Données persistantes via localStorage
+
+### Fichiers associés
+
+- [candidatures.html](candidatures.html)
+- [CSS/job-tracker.css](CSS/job-tracker.css)
+- [JS/job-tracker-data.js](JS/job-tracker-data.js)
+- [JS/job-tracker-ui.js](JS/job-tracker-ui.js)
+- [JS/job-tracker-app.js](JS/job-tracker-app.js)
+
+### Usage local
+
+Ouvrez [candidatures.html](candidatures.html) dans le navigateur pour lancer l'application.
 
 ---
 
-## Structure du projet
+## HoraireTracker
+
+Application web de suivi des horaires de travail avec vues semaine, journal, récapitulatif mensuel et graphiques.
+
+### Fonctionnalités
+
+- Vue semaine avec navigation
+- Vue journal filtrable
+- Vue récapitulatif mensuel
+- Vue graphiques
+- Export CSV
+- Données persistantes via localStorage
+
+### Fichiers associés
+
+- [horaires.html](horaires.html)
+- [CSS/horaire-tracker.css](CSS/horaire-tracker.css)
+- [JS/horaire-tracker-data.js](JS/horaire-tracker-data.js)
+- [JS/horaire-tracker-ui.js](JS/horaire-tracker-ui.js)
+- [JS/horaire-tracker-app.js](JS/horaire-tracker-app.js)
+
+### Usage local
+
+Ouvrez [horaires.html](horaires.html) dans le navigateur pour lancer l'application.
+
+---
+
+## Structure du dépôt
 
 ```text
 Portfolio/
-|- portfolio.html
-|- README.md
-|- CSS/
-|  |- style.css
-|- JS/
-|  |- script.js
-|- Images/
-   |- Profil.jpg
+├── candidatures.html
+├── horaires.html
+├── index.html
+├── README.md
+├── CSS/
+│   ├── portfolio.css
+│   ├── job-tracker.css
+│   └── horaire-tracker.css
+├── JS/
+│   ├── portfolio.js
+│   ├── job-tracker-data.js
+│   ├── job-tracker-ui.js
+│   ├── job-tracker-app.js
+│   ├── horaire-tracker-data.js
+│   ├── horaire-tracker-ui.js
+│   └── horaire-tracker-app.js
+└── Images/
 ```
-
----
-
-## Focus projet: Silence Stellaire
-
-Projet realise en equipe de 3 dans le cadre de la L2 Informatique.
-
-- Theme: logique de jeu + collaboration + gestion de projet
-- Duree: 3 mois
-- Langage principal: C
-- Repo: <a href="https://github.com/Mateoraison/Silence-Stellaire" target="_blank">Voir le code</a>
-
----
-
-## Objectifs d'evolution
-
-- Ajouter d'autres projets avec captures et demos
-- Integrer un formulaire de contact fonctionnel
-- Ajouter une version bilingue (FR/EN)
-- Optimiser le SEO et les performances
 
 ---
 
@@ -100,6 +145,6 @@ Projet realise en equipe de 3 dans le cadre de la L2 Informatique.
 
 <div align="center">
 
-Concu et developpe par <strong>Maxime Leroux</strong>
+Conçu et développé par <strong>Maxime Leroux</strong>
 
 </div>
