@@ -8,21 +8,20 @@ function renderStats() {
   const today   = todayISO();
   const thisMonth = today.slice(0, 7);
   const ws = weekStart(App.weekOffset);
-  const we = new Date(ws.getTime() + 7 * 864e5);
+  const analysis = buildWeeklyAnalysis(entries);
+  const currentWeekKey = weekKey(ws.toISOString().slice(0, 10));
+  const currentWeek = analysis.buckets.find(bucket => bucket.key === currentWeekKey) || {
+    total: 0,
+    target: Settings.getWeeklyHours(),
+    overtime: 0,
+    entries: [],
+  };
 
-  let wH = 0, mH = 0, mDue = 0, mSup = 0;
-
-  entries.forEach(e => {
-    const h  = calcHours(e.arrive, e.depart, e.pause || 0);
-    const d  = new Date(e.date + 'T00:00:00');
-    if (d >= ws && d < we) wH += h;
-    if (e.date.startsWith(thisMonth)) {
-      mH   += h;
-      mDue += (e.contrat || 7);
-      if (h > (e.contrat || 7)) mSup += h - (e.contrat || 7);
-    }
-  });
-
+  const monthWeeks = analysis.buckets.filter(bucket => bucket.entries.some(entry => entry.date.startsWith(thisMonth)));
+  const wH = currentWeek.total;
+  const mH = monthWeeks.reduce((acc, bucket) => acc + bucket.total, 0);
+  const mDue = monthWeeks.reduce((acc, bucket) => acc + bucket.target, 0);
+  const mSup = monthWeeks.reduce((acc, bucket) => acc + bucket.overtime, 0);
   const mDelta = mH - mDue;
   const d = new Date();
 
@@ -35,7 +34,7 @@ function renderStats() {
     <div class="scard c2">
       <div class="sl">Ce mois</div>
       <div class="sv">${fmtH(mH)}</div>
-      <div class="sd">/ ${fmtH(mDue)} dues</div>
+      <div class="sd">/ ${fmtH(mDue)} hebdo</div>
     </div>
     <div class="scard c3">
       <div class="sl">Heures sup.</div>
@@ -65,37 +64,42 @@ function renderWeekView(offset) {
   const ws = weekStart(offset);
   const we = new Date(ws.getTime() + 6 * 864e5);
   const today = todayISO();
+  const entries = Store.getAll();
+  const analysis = buildWeeklyAnalysis(entries);
+  const weekKeyValue = weekKey(ws.toISOString().slice(0, 10));
+  const weekBucket = analysis.buckets.find(bucket => bucket.key === weekKeyValue) || {
+    target: Settings.getWeeklyHours(),
+    total: 0,
+    overtime: 0,
+    entries: [],
+  };
+
+  const entryMap = analysis.entryMap;
 
   document.getElementById('weekLabel').textContent =
     `${ws.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} – ` +
     `${we.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
   const days = Array.from({ length: 7 }, (_, i) => new Date(ws.getTime() + i * 864e5));
-  const entries = Store.getAll();
-
-  let wTotal = 0, wDue = 0, wSup = 0;
 
   document.getElementById('weekGrid').innerHTML = days.map((d, i) => {
     const iso   = d.toISOString().slice(0, 10);
     const isToday = iso === today;
     const entry = entries.find(e => e.date === iso);
     const isWE  = i === 5 || i === 6;
+    const annotated = entry ? entryMap.get(entry.id) : null;
 
     let h = 0, badge = '', badgeBg = '', badgeFg = '';
     if (entry) {
-      h      = calcHours(entry.arrive, entry.depart, entry.pause || 0);
-      wTotal += h;
-      wDue   += (entry.contrat || 7);
-      if (h > (entry.contrat || 7)) wSup += h - (entry.contrat || 7);
-      const c = TYPE_COLORS[entry.type] || TYPE_COLORS['Normal'];
-      badge   = entry.type;
+      h      = annotated?.hours || calcHours(entry.arrive, entry.depart, entry.pause || 0);
+      const displayType = annotated?.displayType || entry.type;
+      const c = TYPE_COLORS[displayType] || TYPE_COLORS['Normal'];
+      badge   = displayType;
       badgeBg = c.bg;
       badgeFg = c.fg;
     }
 
-    const hColor = entry
-      ? (h > (entry.contrat || 7) ? '#534AB7' : h < (entry.contrat || 7) && entry.type !== 'Absence' ? '#A32D2D' : 'inherit')
-      : 'inherit';
+    const hColor = annotated?.overtime > 0 ? '#534AB7' : 'inherit';
 
     return `
       <div class="day-col${isToday ? ' today' : ''}" onclick="App.dayClick('${iso}', ${entry ? entry.id : 'null'})">
@@ -114,6 +118,9 @@ function renderWeekView(offset) {
       </div>`;
   }).join('');
 
+  const wTotal = weekBucket.total;
+  const wDue = weekBucket.target;
+  const wSup = weekBucket.overtime;
   const wDelta = wTotal - wDue;
   document.getElementById('weekSummary').innerHTML = `
     <div class="sum-card">
@@ -124,7 +131,7 @@ function renderWeekView(offset) {
     <div class="sum-card">
       <div class="sl">Heures dues</div>
       <div class="sv">${fmtH(wDue)}</div>
-      <div class="sd">selon contrat</div>
+      <div class="sd">taux hebdo</div>
     </div>
     <div class="sum-card">
       <div class="sl">Heures sup.</div>
@@ -158,10 +165,28 @@ function renderListView() {
   const fm  = document.getElementById('filterMonth')?.value || '';
   const ft  = document.getElementById('filterType')?.value  || '';
 
-  let list = Store.getAll();
-  if (q)  list = list.filter(e => (e.note || '').toLowerCase().includes(q) || e.type.toLowerCase().includes(q) || e.date.includes(q));
-  if (fm) list = list.filter(e => e.date.startsWith(fm));
-  if (ft) list = list.filter(e => e.type === ft);
+  const allEntries = Store.getAll();
+  const analysis = buildWeeklyAnalysis(allEntries);
+
+  let list = allEntries.filter(e => {
+    const annotated = analysis.entryMap.get(e.id);
+    const displayType = annotated?.displayType || 'Normal';
+
+    if (q && !((e.note || '').toLowerCase().includes(q) || displayType.toLowerCase().includes(q) || e.date.includes(q))) {
+      return false;
+    }
+
+    if (fm && !e.date.startsWith(fm)) {
+      return false;
+    }
+
+    if (ft && displayType !== ft) {
+      return false;
+    }
+
+    return true;
+  });
+
   list.sort((a, b) => b.date.localeCompare(a.date));
 
   const el = document.getElementById('listView');
@@ -175,9 +200,11 @@ function renderListView() {
   }
 
   el.innerHTML = list.map(e => {
-    const h     = calcHours(e.arrive, e.depart, e.pause || 0);
-    const delta = e.type === 'Absence' ? -(e.contrat || 7) : h - (e.contrat || 7);
-    const c     = TYPE_COLORS[e.type] || TYPE_COLORS['Normal'];
+    const annotated = analysis.entryMap.get(e.id);
+    const h     = annotated?.hours || calcHours(e.arrive, e.depart, e.pause || 0);
+    const delta = annotated?.overtime || 0;
+    const displayType = annotated?.displayType || 'Normal';
+    const c     = TYPE_COLORS[displayType] || TYPE_COLORS['Normal'];
     const d     = new Date(e.date + 'T00:00:00');
 
     return `
@@ -197,11 +224,9 @@ function renderListView() {
         </div>
         <div class="entry-right">
           <div class="entry-hours">${fmtH(h)}</div>
-          <span class="badge" style="background:${c.bg};color:${c.fg}">${e.type}</span>
-          ${e.type !== 'Absence'
-            ? `<span style="font-size:11px;color:${delta >= 0 ? '#3B6D11' : '#A32D2D'}">
-                 ${delta >= 0 ? '+' : ''}${fmtH(delta)}
-               </span>`
+          <span class="badge" style="background:${c.bg};color:${c.fg}">${displayType}</span>
+          ${delta > 0
+            ? `<span style="font-size:11px;color:#534AB7">+${fmtH(delta)}</span>`
             : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;margin-left:4px">
@@ -238,18 +263,16 @@ function renderMonthView() {
     return;
   }
 
-  const list = Store.getAll()
+  const allEntries = Store.getAll();
+  const list = allEntries
     .filter(e => e.date.startsWith(sel))
     .sort((a, b) => a.date.localeCompare(b.date));
+  const analysis = buildWeeklyAnalysis(allEntries);
 
-  let totH = 0, totDue = 0, totSup = 0, totAbs = 0;
-  list.forEach(e => {
-    const h = calcHours(e.arrive, e.depart, e.pause || 0);
-    totH   += h;
-    totDue += (e.contrat || 7);
-    if (h > (e.contrat || 7)) totSup += h - (e.contrat || 7);
-    if (e.type === 'Absence')  totAbs++;
-  });
+  const monthWeeks = analysis.buckets.filter(bucket => bucket.entries.some(entry => entry.date.startsWith(sel)));
+  const totH = monthWeeks.reduce((acc, bucket) => acc + bucket.total, 0);
+  const totDue = monthWeeks.reduce((acc, bucket) => acc + bucket.target, 0);
+  const totSup = monthWeeks.reduce((acc, bucket) => acc + bucket.overtime, 0);
   const delta = totH - totDue;
 
   document.getElementById('monthContent').innerHTML = `
@@ -262,7 +285,7 @@ function renderMonthView() {
       <div class="sum-card">
         <div class="sl">Heures dues</div>
         <div class="sv">${fmtH(totDue)}</div>
-        <div class="sd">selon contrat</div>
+        <div class="sd">taux hebdo</div>
       </div>
       <div class="sum-card">
         <div class="sl">Heures sup.</div>
@@ -277,9 +300,9 @@ function renderMonthView() {
         <div class="sd">vs contrat</div>
       </div>
       <div class="sum-card">
-        <div class="sl">Absences</div>
-        <div class="sv">${totAbs}</div>
-        <div class="sd">jour${totAbs > 1 ? 's' : ''}</div>
+        <div class="sl">Jours saisis</div>
+        <div class="sv">${list.length}</div>
+        <div class="sd">dans ce mois</div>
       </div>
     </div>
     <div style="overflow-x:auto">
@@ -299,9 +322,11 @@ function renderMonthView() {
         </thead>
         <tbody>
           ${list.map(e => {
-            const h     = calcHours(e.arrive, e.depart, e.pause || 0);
-            const delta = e.type === 'Absence' ? -(e.contrat || 7) : h - (e.contrat || 7);
-            const c     = TYPE_COLORS[e.type] || TYPE_COLORS['Normal'];
+            const annotated = analysis.entryMap.get(e.id);
+            const h     = annotated?.hours || calcHours(e.arrive, e.depart, e.pause || 0);
+            const delta = annotated?.overtime || 0;
+            const displayType = annotated?.displayType || e.type;
+            const c     = TYPE_COLORS[displayType] || TYPE_COLORS['Normal'];
             const d     = new Date(e.date + 'T00:00:00');
             return `
               <tr>
@@ -310,11 +335,11 @@ function renderMonthView() {
                 <td>${e.depart || '—'}</td>
                 <td>${e.pause ? e.pause + ' min' : '—'}</td>
                 <td><strong>${fmtH(h)}</strong></td>
-                <td>${fmtH(e.contrat || 7)}</td>
-                <td class="${delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-zero'}">
-                  ${delta >= 0 ? '+' : ''}${fmtH(delta)}
+                <td>${fmtH(Settings.getWeeklyHours())}</td>
+                <td class="${delta > 0 ? 'delta-pos' : 'delta-zero'}">
+                  ${delta > 0 ? '+' : '—'}${delta > 0 ? fmtH(delta) : ''}
                 </td>
-                <td><span class="badge" style="background:${c.bg};color:${c.fg}">${e.type}</span></td>
+                <td><span class="badge" style="background:${c.bg};color:${c.fg}">${displayType}</span></td>
                 <td style="color:var(--text-2);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.note || ''}</td>
               </tr>`;
           }).join('')}
@@ -328,14 +353,15 @@ const _charts = {};
 
 function renderChartsView() {
   const entries = Store.getAll();
+  const analysis = buildWeeklyAnalysis(entries);
+  const displayEntries = entries.map(entry => analysis.entryMap.get(entry.id) || entry);
 
   // --- Heures par semaine ---
   const byWeek = {};
-  entries.forEach(e => {
-    const w = e.date.slice(0, 4) + '-W' + String(isoWeek(e.date)).padStart(2, '0');
-    byWeek[w] = byWeek[w] || { h: 0, due: 0 };
-    byWeek[w].h   += calcHours(e.arrive, e.depart, e.pause || 0);
-    byWeek[w].due += (e.contrat || 7);
+  analysis.buckets.forEach(bucket => {
+    byWeek[bucket.key] = byWeek[bucket.key] || { h: 0, due: 0 };
+    byWeek[bucket.key].h   += bucket.total;
+    byWeek[bucket.key].due += bucket.target;
   });
   const wks     = Object.keys(byWeek).sort().slice(-12);
   const wLabels = wks.map(w => 'S' + w.split('-W')[1]);
@@ -388,7 +414,7 @@ function renderChartsView() {
 
   // --- Répartition par type ---
   const typeCounts = {};
-  entries.forEach(e => typeCounts[e.type] = (typeCounts[e.type] || 0) + 1);
+  displayEntries.forEach(e => typeCounts[e.displayType || e.type] = (typeCounts[e.displayType || e.type] || 0) + 1);
   const tLabels = Object.keys(typeCounts);
   const tData   = tLabels.map(t => typeCounts[t]);
   const tDots   = tLabels.map(t => TYPE_HEX[t]?.dot  || '#888');
@@ -421,8 +447,8 @@ function renderChartsView() {
     return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   });
   const dData = sorted.map(e => {
-    const h     = calcHours(e.arrive, e.depart, e.pause || 0);
-    const delta = e.type === 'Absence' ? -(e.contrat || 7) : h - (e.contrat || 7);
+    const annotated = analysis.entryMap.get(e.id);
+    const delta = annotated?.overtime || 0;
     cumul += delta;
     return Math.round(cumul * 100) / 100;
   });

@@ -98,11 +98,9 @@
             <option value="">Tous les mois</option>
           </select>
           <select id="filterType" onchange="App.renderList()">
-            <option value="">Tous les types</option>
+            <option value="">Tous les états</option>
             <option>Normal</option>
             <option>Heure sup.</option>
-            <option>Absence</option>
-            <option>Partiel</option>
           </select>
         </div>
         <div class="entries" id="listView"></div>
@@ -119,9 +117,9 @@
       <!-- ── CHARTS VIEW ── -->
       <section id="view-charts" class="view">
         <div class="chart-card">
-          <h3>Heures travaillées par semaine vs contrat</h3>
+          <h3>Heures travaillées par semaine vs taux hebdo</h3>
           <div class="chart-wrap" style="height:220px">
-            <canvas id="chartWeeks" role="img" aria-label="Heures travaillées par semaine comparées aux heures contractuelles"></canvas>
+            <canvas id="chartWeeks" role="img" aria-label="Heures travaillées par semaine comparées au taux hebdomadaire"></canvas>
           </div>
         </div>
         <div class="chart-card">
@@ -158,13 +156,10 @@
             <input id="fDate" type="date" />
           </div>
           <div class="form-field">
-            <label for="fType">Type de journée</label>
-            <select id="fType">
-              <option>Normal</option>
-              <option>Heure sup.</option>
-              <option>Absence</option>
-              <option>Partiel</option>
-            </select>
+            <label>Détection automatique</label>
+            <div style="font-size:13px;color:var(--text-2);padding:0.6rem 0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+              L'app calcule automatiquement l'heure sup. à partir de votre taux hebdomadaire.
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -183,8 +178,8 @@
             <input id="fPause" type="number" placeholder="60" min="0" max="480" />
           </div>
           <div class="form-field">
-            <label for="fContrat">Heures contractuelles</label>
-            <input id="fContrat" type="number" placeholder="7" step="0.5" min="0" />
+            <label for="fContrat">Heures par semaine</label>
+            <input id="fContrat" type="number" placeholder="35" step="0.5" min="0" />
           </div>
         </div>
         <div class="form-field">

@@ -12,6 +12,7 @@ const App = (() => {
 
   /* ── Init ── */
   function init() {
+    Settings.load();
     Store.load();
     _setView('week');
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
@@ -88,11 +89,10 @@ const App = (() => {
 
     document.getElementById('modalTitleText').textContent = e ? 'Modifier la journée' : 'Nouvelle journée';
     document.getElementById('fDate').value    = e?.date    || todayISO();
-    document.getElementById('fType').value    = e?.type    || 'Normal';
     document.getElementById('fArrive').value  = e?.arrive  || '';
     document.getElementById('fDepart').value  = e?.depart  || '';
     document.getElementById('fPause').value   = e?.pause   ?? 60;
-    document.getElementById('fContrat').value = e?.contrat ?? 7;
+    document.getElementById('fContrat').value = e?.contrat ?? Settings.getWeeklyHours();
     document.getElementById('fNote').value    = e?.note    || '';
 
     document.getElementById('modalBackdrop').classList.add('show');
@@ -114,13 +114,15 @@ const App = (() => {
 
     const data = {
       date,
-      type:    document.getElementById('fType').value,
+      type:    _editingId ? (Store.getById(_editingId)?.type || 'Normal') : 'Normal',
       arrive:  document.getElementById('fArrive').value,
       depart:  document.getElementById('fDepart').value,
       pause:   parseFloat(document.getElementById('fPause').value)   || 0,
-      contrat: parseFloat(document.getElementById('fContrat').value) || 7,
+      contrat: parseFloat(document.getElementById('fContrat').value) || Settings.getWeeklyHours(),
       note:    document.getElementById('fNote').value.trim(),
     };
+
+    Settings.setWeeklyHours(data.contrat);
 
     if (_editingId) {
       Store.update(_editingId, data);
