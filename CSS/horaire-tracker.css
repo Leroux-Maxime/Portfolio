@@ -138,7 +138,7 @@ body.modal-open { overflow: hidden; }
 
 .topbar h1 { font-size: 22px; font-weight: 600; letter-spacing: -.3px; }
 .text-muted { font-size: 13px; color: var(--text-2); margin-top: 3px; }
-.topbar-actions { display: flex; gap: 8px; }
+.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ── KPI STATS ── */
 .stats-row {
@@ -612,7 +612,7 @@ textarea { height: auto; padding: 8px 10px; resize: vertical; }
   }
   .topbar h1 { font-size: 20px; }
   .topbar-actions { width: 100%; }
-  .topbar-actions .btn-primary { width: 100%; justify-content: center; }
+  .topbar-actions .btn { width: 100%; justify-content: center; }
   .form-row { grid-template-columns: 1fr; }
   .stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .week-nav { flex-wrap: wrap; justify-content: space-between; }

@@ -19,11 +19,10 @@
 
 ## Vue d'ensemble
 
-Ce dépôt regroupe trois interfaces front-end distinctes:
+Ce dépôt regroupe deux interfaces front-end distinctes:
 
 1. le portfolio principal, qui présente mon profil, mes compétences, mon parcours et mes contacts;
-2. JobTracker, une application de suivi de candidatures;
-3. HoraireTracker, une application de suivi des horaires de travail.
+2. HoraireTracker, une application de suivi des horaires de travail.
 
 Chaque projet reste indépendant, mais partage une structure simple et des fichiers explicites.
 
@@ -55,35 +54,6 @@ Page d'accueil personnelle construite pour présenter mon profil et mes projets.
 - [CSS/portfolio.css](CSS/portfolio.css)
 - [JS/portfolio.js](JS/portfolio.js)
 
----
-
-## JobTracker
-
-Application web de suivi de candidatures professionnelles, entièrement côté client.
-
-### Fonctionnalités
-
-- Vue liste avec cartes détaillées
-- Vue Kanban par statut
-- Vue statistiques avec graphiques
-- Filtres, tri et recherche
-- Export CSV
-- Données persistantes via localStorage
-
-### Fichiers associés
-
-- [candidatures.html](candidatures.html)
-- [CSS/job-tracker.css](CSS/job-tracker.css)
-- [JS/job-tracker-data.js](JS/job-tracker-data.js)
-- [JS/job-tracker-ui.js](JS/job-tracker-ui.js)
-- [JS/job-tracker-app.js](JS/job-tracker-app.js)
-
-### Usage local
-
-Ouvrez [candidatures.html](candidatures.html) dans le navigateur pour lancer l'application.
-
----
-
 ## HoraireTracker
 
 Application web de suivi des horaires de travail avec vues semaine, journal, récapitulatif mensuel et graphiques.
@@ -96,6 +66,8 @@ Application web de suivi des horaires de travail avec vues semaine, journal, ré
 - Vue graphiques
 - Export CSV
 - Données persistantes via localStorage
+- Mode mobile optimisé avec navigation basse
+- Synchronisation cloud optionnelle via Supabase
 
 ### Fichiers associés
 
@@ -109,25 +81,35 @@ Application web de suivi des horaires de travail avec vues semaine, journal, ré
 
 Ouvrez [horaires.html](horaires.html) dans le navigateur pour lancer l'application.
 
+### Synchronisation cloud
+
+La synchronisation est optionnelle et reste désactivée tant qu'elle n'est pas configurée dans l'interface.
+
+Pour l'activer, il faut renseigner:
+
+- l'URL de votre projet Supabase
+- la clé anon du projet
+- un code de synchronisation partagé entre vos appareils
+- le nom de la table distante
+
+Ensuite, collez le contenu de [supabase-schema.sql](supabase-schema.sql) dans l'éditeur SQL de Supabase une seule fois.
+
+La table créée contient les colonnes `uid`, `sync_token`, `id`, `date`, `type`, `arrive`, `depart`, `pause`, `contrat`, `note` et `updated_at`.
+
 ---
 
 ## Structure du dépôt
 
 ```text
 Portfolio/
-├── candidatures.html
 ├── horaires.html
 ├── index.html
 ├── README.md
 ├── CSS/
 │   ├── portfolio.css
-│   ├── job-tracker.css
 │   └── horaire-tracker.css
 ├── JS/
 │   ├── portfolio.js
-│   ├── job-tracker-data.js
-│   ├── job-tracker-ui.js
-│   ├── job-tracker-app.js
 │   ├── horaire-tracker-data.js
 │   ├── horaire-tracker-ui.js
 │   └── horaire-tracker-app.js

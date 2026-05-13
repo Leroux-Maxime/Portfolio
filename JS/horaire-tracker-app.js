@@ -13,9 +13,14 @@ const App = (() => {
   /* ── Init ── */
   function init() {
     Settings.load();
+    Sync.load();
     Store.load();
     _setView('week');
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    if (Sync.isEnabled()) {
+      void _syncFromCloud();
+    }
   }
 
   /* ── Navigation ── */
@@ -61,6 +66,46 @@ const App = (() => {
     weekOffset = 0;
     renderStats();
     renderWeekView(weekOffset);
+  }
+
+  async function syncNow() {
+    if (!Sync.isEnabled()) {
+      configureSync();
+      return;
+    }
+
+    try {
+      await _syncFromCloud();
+      alert('Synchronisation terminée.');
+    } catch (err) {
+      console.error('HoraireTracker: sync manuelle impossible', err);
+      alert('Impossible de synchroniser pour le moment. Vérifie l’URL Supabase, la clé et la table.');
+    }
+  }
+
+  function configureSync() {
+    const current = Sync.getConfig();
+    const supabaseUrl = prompt('URL de ton projet Supabase', current.supabaseUrl || 'https://xxxxx.supabase.co');
+    if (supabaseUrl === null) return;
+
+    const anonKey = prompt('Clé anon Supabase', current.anonKey || '');
+    if (anonKey === null) return;
+
+    const syncToken = prompt('Code de synchronisation partagé sur tes appareils', current.syncToken || makeUid().slice(0, 8));
+    if (syncToken === null) return;
+
+    const tableName = prompt('Nom de la table Supabase', current.tableName || 'horairetracker_entries');
+    if (tableName === null) return;
+
+    Sync.save({
+      supabaseUrl,
+      anonKey,
+      syncToken,
+      tableName,
+    });
+
+    alert('Synchronisation configurée. Les prochaines écritures seront envoyées vers Supabase.');
+    void _syncFromCloud();
   }
 
   function dayClick(iso, entryId) {
@@ -126,14 +171,14 @@ const App = (() => {
 
     Settings.setWeeklyHours(data.contrat);
 
-    if (_editingId) {
-      Store.update(_editingId, data);
-    } else {
-      Store.add(data);
-    }
+    const savedEntry = _editingId ? Store.update(_editingId, data) : Store.add(data);
 
     closeModal();
     _refresh();
+
+    if (savedEntry && Sync.isEnabled()) {
+      void Sync.pushEntry(savedEntry).catch(err => console.error('HoraireTracker: sync écriture impossible', err));
+    }
   }
 
   function deleteEntry(id) {
@@ -143,6 +188,10 @@ const App = (() => {
     if (!confirm(`Supprimer la journée du ${d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} ?`)) return;
     Store.remove(id);
     _refresh();
+
+    if (Sync.isEnabled()) {
+      void Sync.deleteEntry(e).catch(err => console.error('HoraireTracker: sync suppression impossible', err));
+    }
   }
 
   /* ── Export ── */
@@ -162,6 +211,14 @@ const App = (() => {
     _setView(_currentView);
   }
 
+  async function _syncFromCloud() {
+    const result = await Sync.syncNow();
+    if (result?.pulled || result?.pushed) {
+      _refresh();
+    }
+    return result;
+  }
+
   /* ── Public API ── */
   return {
     init,
@@ -177,6 +234,8 @@ const App = (() => {
     saveEntry,
     deleteEntry,
     exportCSV,
+    syncNow,
+    configureSync,
     get weekOffset() { return weekOffset; },
   };
 

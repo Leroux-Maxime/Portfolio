@@ -56,7 +56,7 @@ function renderStats() {
   `;
 
   document.getElementById('subline').textContent =
-    `Semaine ${isoWeek(today)} · ${MOIS_LONGS[d.getMonth()]} ${d.getFullYear()}`;
+    `Semaine ${isoWeek(today)} · ${MOIS_LONGS[d.getMonth()]} ${d.getFullYear()}${Sync.isEnabled() ? ' · Cloud actif' : ''}`;
 }
 
 /* ─── Vue Semaine ─── */

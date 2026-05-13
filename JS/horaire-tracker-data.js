@@ -5,6 +5,8 @@
 const STORAGE_KEY = 'horairetracker_v2';
 const LEGACY_STORAGE_KEY = 'horairetracker_v1';
 const SETTINGS_KEY = 'horairetracker_settings_v1';
+const SYNC_SETTINGS_KEY = 'horairetracker_sync_v1';
+const STORAGE_VERSION = 3;
 const DEFAULT_WEEKLY_HOURS = 35;
 
 const JOURS_COURTS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -98,6 +100,44 @@ function normalizeWeeklyHours(value) {
   return parsed;
 }
 
+function makeUid() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `uid_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizeEntry(entry, fresh = false) {
+  return {
+    ...entry,
+    uid: entry.uid || makeUid(),
+    updatedAt: entry.updatedAt || (fresh ? new Date().toISOString() : '1970-01-01T00:00:00.000Z'),
+    contrat: normalizeWeeklyHours(entry.contrat),
+  };
+}
+
+function mergeEntriesByUid(localEntries = [], remoteEntries = []) {
+  const merged = new Map();
+
+  for (const entry of [...localEntries, ...remoteEntries]) {
+    const normalized = normalizeEntry(entry);
+    const current = merged.get(normalized.uid);
+    if (!current) {
+      merged.set(normalized.uid, normalized);
+      continue;
+    }
+
+    const currentStamp = current.updatedAt || '1970-01-01T00:00:00.000Z';
+    const incomingStamp = normalized.updatedAt || '1970-01-01T00:00:00.000Z';
+    if (incomingStamp >= currentStamp) {
+      merged.set(normalized.uid, normalized);
+    }
+  }
+
+  return [...merged.values()].sort((a, b) => a.date.localeCompare(b.date) || (a.id - b.id));
+}
+
 function localISODate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -170,21 +210,23 @@ const Store = (() => {
       if (raw) {
         const p = JSON.parse(raw);
         const legacyEntries = p.entries || [];
-        _entries = p.version === 2
-          ? legacyEntries
-          : legacyEntries.map(entry => ({
-              ...entry,
-              contrat: normalizeWeeklyHours(entry.contrat) <= 12
-                ? normalizeWeeklyHours(entry.contrat) * 5
-                : normalizeWeeklyHours(entry.contrat),
-            }));
+        _entries = legacyEntries.map(entry => {
+          const normalizedContract = normalizeWeeklyHours(entry.contrat) <= 12
+            ? normalizeWeeklyHours(entry.contrat) * 5
+            : normalizeWeeklyHours(entry.contrat);
+
+          return normalizeEntry({
+            ...entry,
+            contrat: normalizedContract,
+          });
+        });
         _nextId  = p.nextId  || (_entries.length ? Math.max(..._entries.map(e => e.id)) + 1 : 1);
-        if (p.version !== 2) {
+        if (p.version !== STORAGE_VERSION) {
           _persist();
         }
       } else {
         // Premier lancement : données de démo
-        _entries = JSON.parse(JSON.stringify(SAMPLE_ENTRIES));
+        _entries = SAMPLE_ENTRIES.map(entry => normalizeEntry(entry));
         _nextId  = SAMPLE_ENTRIES.length + 1;
         _persist();
       }
@@ -196,14 +238,44 @@ const Store = (() => {
   }
 
   function _persist() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, entries: _entries, nextId: _nextId }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, entries: _entries, nextId: _nextId }));
   }
 
   function getAll()     { return _entries; }
   function getById(id)  { return _entries.find(e => e.id === id) || null; }
+  function getByUid(uid) { return _entries.find(e => e.uid === uid) || null; }
+
+  function replaceAll(entries) {
+    _entries = entries.map(entry => normalizeEntry(entry));
+    _nextId = _entries.length ? Math.max(..._entries.map(e => e.id || 0)) + 1 : 1;
+    _persist();
+  }
+
+  function importEntries(entries) {
+    const byUid = new Map(_entries.map(entry => [entry.uid, entry]));
+
+    for (const incoming of entries) {
+      const normalized = normalizeEntry(incoming);
+      const current = byUid.get(normalized.uid);
+      if (!current) {
+        _entries.push(normalized);
+        continue;
+      }
+
+      const currentStamp = current.updatedAt || '1970-01-01T00:00:00.000Z';
+      const incomingStamp = normalized.updatedAt || '1970-01-01T00:00:00.000Z';
+      if (incomingStamp >= currentStamp) {
+        Object.assign(current, normalized);
+      }
+    }
+
+    _entries.sort((a, b) => a.date.localeCompare(b.date) || (a.id - b.id));
+    _nextId = _entries.length ? Math.max(..._entries.map(e => e.id || 0)) + 1 : 1;
+    _persist();
+  }
 
   function add(data) {
-    const entry = { ...data, contrat: normalizeWeeklyHours(data.contrat), id: _nextId++ };
+    const entry = normalizeEntry({ ...data, id: _nextId++ }, true);
     _entries.push(entry);
     _persist();
     return entry;
@@ -212,7 +284,13 @@ const Store = (() => {
   function update(id, data) {
     const idx = _entries.findIndex(e => e.id === id);
     if (idx === -1) return null;
-    _entries[idx] = { ..._entries[idx], ...data, contrat: normalizeWeeklyHours(data.contrat ?? _entries[idx].contrat) };
+    _entries[idx] = normalizeEntry({
+      ..._entries[idx],
+      ...data,
+      uid: _entries[idx].uid,
+      id: _entries[idx].id,
+      updatedAt: new Date().toISOString(),
+    }, true);
     _persist();
     return _entries[idx];
   }
@@ -245,7 +323,174 @@ const Store = (() => {
     return [headers.join(','), ...rows].join('\n');
   }
 
-  return { load, getAll, getById, add, update, remove, exportCSV };
+  return { load, getAll, getById, getByUid, replaceAll, importEntries, add, update, remove, exportCSV };
+})();
+
+const Sync = (() => {
+  let _config = {
+    enabled: false,
+    supabaseUrl: '',
+    anonKey: '',
+    syncToken: '',
+    tableName: 'horairetracker_entries',
+  };
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(SYNC_SETTINGS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      _config = {
+        enabled: Boolean(parsed.enabled),
+        supabaseUrl: (parsed.supabaseUrl || '').trim().replace(/\/$/, ''),
+        anonKey: (parsed.anonKey || '').trim(),
+        syncToken: (parsed.syncToken || '').trim(),
+        tableName: (parsed.tableName || 'horairetracker_entries').trim() || 'horairetracker_entries',
+      };
+    } catch (err) {
+      console.error('HoraireTracker: erreur chargement synchronisation', err);
+    }
+  }
+
+  function save(config) {
+    _config = {
+      enabled: true,
+      supabaseUrl: (config.supabaseUrl || '').trim().replace(/\/$/, ''),
+      anonKey: (config.anonKey || '').trim(),
+      syncToken: (config.syncToken || '').trim(),
+      tableName: (config.tableName || 'horairetracker_entries').trim() || 'horairetracker_entries',
+    };
+    localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(_config));
+  }
+
+  function clear() {
+    _config = {
+      enabled: false,
+      supabaseUrl: '',
+      anonKey: '',
+      syncToken: '',
+      tableName: 'horairetracker_entries',
+    };
+    localStorage.removeItem(SYNC_SETTINGS_KEY);
+  }
+
+  function getConfig() {
+    return { ..._config };
+  }
+
+  function isEnabled() {
+    return Boolean(_config.enabled && _config.supabaseUrl && _config.anonKey && _config.syncToken);
+  }
+
+  function baseUrl() {
+    return `${_config.supabaseUrl}/rest/v1/${encodeURIComponent(_config.tableName)}`;
+  }
+
+  function headers() {
+    return {
+      apikey: _config.anonKey,
+      Authorization: `Bearer ${_config.anonKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    };
+  }
+
+  function toRemoteRow(entry) {
+    return {
+      uid: entry.uid,
+      sync_token: _config.syncToken,
+      id: entry.id,
+      date: entry.date,
+      type: entry.type,
+      arrive: entry.arrive,
+      depart: entry.depart,
+      pause: entry.pause,
+      contrat: entry.contrat,
+      note: entry.note,
+      updated_at: entry.updatedAt || new Date().toISOString(),
+    };
+  }
+
+  function fromRemoteRow(row) {
+    return normalizeEntry({
+      uid: row.uid,
+      id: Number(row.id),
+      date: row.date,
+      type: row.type,
+      arrive: row.arrive || '',
+      depart: row.depart || '',
+      pause: Number(row.pause) || 0,
+      contrat: normalizeWeeklyHours(row.contrat),
+      note: row.note || '',
+      updatedAt: row.updated_at || row.updatedAt || '1970-01-01T00:00:00.000Z',
+    });
+  }
+
+  async function fetchRows() {
+    if (!isEnabled()) return [];
+    const url = `${baseUrl()}?sync_token=eq.${encodeURIComponent(_config.syncToken)}&select=*`;
+    const response = await fetch(url, { headers: headers() });
+    if (!response.ok) {
+      throw new Error(`Supabase fetch failed (${response.status})`);
+    }
+    return response.json();
+  }
+
+  async function pushEntries(entries) {
+    if (!isEnabled()) return;
+    const rows = entries.map(toRemoteRow);
+    const response = await fetch(`${baseUrl()}?on_conflict=uid`, {
+      method: 'POST',
+      headers: {
+        ...headers(),
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(rows),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Supabase push failed (${response.status})`);
+    }
+  }
+
+  async function pushEntry(entry) {
+    return pushEntries([entry]);
+  }
+
+  async function deleteEntry(entry) {
+    if (!isEnabled() || !entry?.uid) return;
+    const url = `${baseUrl()}?sync_token=eq.${encodeURIComponent(_config.syncToken)}&uid=eq.${encodeURIComponent(entry.uid)}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: headers(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Supabase delete failed (${response.status})`);
+    }
+  }
+
+  async function pullIntoStore() {
+    if (!isEnabled()) return { remoteCount: 0, localCount: Store.getAll().length };
+    const rows = await fetchRows();
+    const remoteEntries = rows.map(fromRemoteRow);
+    if (remoteEntries.length) {
+      Store.replaceAll(mergeEntriesByUid(Store.getAll(), remoteEntries));
+    }
+    return { remoteCount: remoteEntries.length, localCount: Store.getAll().length };
+  }
+
+  async function syncNow() {
+    if (!isEnabled()) return { skipped: true };
+    const rows = await fetchRows();
+    const remoteEntries = rows.map(fromRemoteRow);
+    const mergedEntries = mergeEntriesByUid(Store.getAll(), remoteEntries);
+    Store.replaceAll(mergedEntries);
+    await pushEntries(mergedEntries);
+    return { pulled: remoteEntries.length, pushed: mergedEntries.length };
+  }
+
+  return { load, save, clear, getConfig, isEnabled, pullIntoStore, pushEntry, pushEntries, deleteEntry, syncNow };
 })();
 
 /* ─── Helpers ─── */
