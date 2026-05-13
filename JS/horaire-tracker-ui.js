@@ -103,7 +103,7 @@ function renderWeekView(offset) {
     const clickTargetId = dayEntries.length === 1 ? dayEntries[0].id : 'null';
 
     return `
-      <div class="day-col${isToday ? ' today' : ''}" onclick="App.dayClick('${iso}', ${clickTargetId})">
+      <div class="day-col${isToday ? ' today' : ''}" data-date="${iso}" onclick="App.dayClick('${iso}', ${clickTargetId})">
         <div class="day-head">
           <div class="dn">${JOURS_COURTS[d.getDay()]}</div>
           <div>${d.getDate()}</div>
@@ -119,6 +119,13 @@ function renderWeekView(offset) {
         </div>
       </div>`;
   }).join('');
+
+  if (window.matchMedia('(max-width: 600px)').matches) {
+    requestAnimationFrame(() => {
+      const currentDay = document.querySelector('.day-col.today') || document.querySelector('.day-col[data-date="' + today + '"]');
+      currentDay?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    });
+  }
 
   const wTotal = weekBucket.total;
   const wDue = weekBucket.target;

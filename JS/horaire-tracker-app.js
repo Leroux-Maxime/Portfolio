@@ -32,7 +32,7 @@ const App = (() => {
     });
 
     // Sidebar buttons
-    document.querySelectorAll('.nav-item').forEach(btn => {
+    document.querySelectorAll('.nav-item, .mobile-nav-item[data-view]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === view);
     });
 
@@ -96,11 +96,13 @@ const App = (() => {
     document.getElementById('fNote').value    = e?.note    || '';
 
     document.getElementById('modalBackdrop').classList.add('show');
+    document.body.classList.add('modal-open');
     setTimeout(() => document.getElementById('fDate').focus(), 50);
   }
 
   function closeModal() {
     document.getElementById('modalBackdrop').classList.remove('show');
+    document.body.classList.remove('modal-open');
     _editingId = null;
   }
 
