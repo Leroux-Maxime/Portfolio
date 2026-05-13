@@ -9,7 +9,7 @@ function renderStats() {
   const thisMonth = today.slice(0, 7);
   const ws = weekStart(App.weekOffset);
   const analysis = buildWeeklyAnalysis(entries);
-  const currentWeekKey = weekKey(ws.toISOString().slice(0, 10));
+  const currentWeekKey = weekKey(localISODate(ws));
   const currentWeek = analysis.buckets.find(bucket => bucket.key === currentWeekKey) || {
     total: 0,
     target: Settings.getWeeklyHours(),
@@ -66,7 +66,7 @@ function renderWeekView(offset) {
   const today = todayISO();
   const entries = Store.getAll();
   const analysis = buildWeeklyAnalysis(entries);
-  const weekKeyValue = weekKey(ws.toISOString().slice(0, 10));
+  const weekKeyValue = weekKey(localISODate(ws));
   const weekBucket = analysis.buckets.find(bucket => bucket.key === weekKeyValue) || {
     target: Settings.getWeeklyHours(),
     total: 0,
@@ -83,34 +83,36 @@ function renderWeekView(offset) {
   const days = Array.from({ length: 7 }, (_, i) => new Date(ws.getTime() + i * 864e5));
 
   document.getElementById('weekGrid').innerHTML = days.map((d, i) => {
-    const iso   = d.toISOString().slice(0, 10);
+    const iso   = localISODate(d);
     const isToday = iso === today;
-    const entry = entries.find(e => e.date === iso);
+    const dayEntries = entries.filter(e => e.date === iso);
     const isWE  = i === 5 || i === 6;
-    const annotated = entry ? entryMap.get(entry.id) : null;
+    const annotatedEntries = dayEntries.map(entry => entryMap.get(entry.id)).filter(Boolean);
+    const dayTotalHours = annotatedEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
+    const dayHasOvertime = annotatedEntries.some(entry => entry.overtime > 0);
+    const primaryEntry = dayEntries[0] || null;
+    const primaryAnnotated = primaryEntry ? entryMap.get(primaryEntry.id) : null;
 
-    let h = 0, badge = '', badgeBg = '', badgeFg = '';
-    if (entry) {
-      h      = annotated?.hours || calcHours(entry.arrive, entry.depart, entry.pause || 0);
-      const displayType = annotated?.displayType || entry.type;
-      const c = TYPE_COLORS[displayType] || TYPE_COLORS['Normal'];
-      badge   = displayType;
-      badgeBg = c.bg;
-      badgeFg = c.fg;
-    }
+    const badge = dayEntries.length > 1 ? `${dayEntries.length} saisies` : (primaryAnnotated?.displayType || 'Normal');
+    const primaryType = primaryAnnotated?.displayType || 'Normal';
+    const primaryColors = TYPE_COLORS[primaryType] || TYPE_COLORS['Normal'];
+    const badgeBg = dayEntries.length > 1 ? '#1a1917' : primaryColors.bg;
+    const badgeFg = dayEntries.length > 1 ? '#ffffff' : primaryColors.fg;
 
-    const hColor = annotated?.overtime > 0 ? '#534AB7' : 'inherit';
+    const hColor = dayHasOvertime ? '#534AB7' : 'inherit';
+    const clickTargetId = dayEntries.length === 1 ? dayEntries[0].id : 'null';
 
     return `
-      <div class="day-col${isToday ? ' today' : ''}" onclick="App.dayClick('${iso}', ${entry ? entry.id : 'null'})">
+      <div class="day-col${isToday ? ' today' : ''}" onclick="App.dayClick('${iso}', ${clickTargetId})">
         <div class="day-head">
           <div class="dn">${JOURS_COURTS[d.getDay()]}</div>
           <div>${d.getDate()}</div>
         </div>
         <div class="day-body">
-          ${entry
-            ? `<div class="day-hours" style="color:${hColor}">${fmtH(h)}</div>
-               ${entry.note ? `<div class="day-note">${entry.note}</div>` : ''}
+          ${dayEntries.length
+            ? `<div class="day-hours" style="color:${hColor}">${fmtH(dayTotalHours)}</div>
+               ${primaryEntry?.note ? `<div class="day-note">${primaryEntry.note}${dayEntries.length > 1 ? ` · +${dayEntries.length - 1} autre${dayEntries.length > 2 ? 's' : ''}` : ''}</div>` : ''}
+               ${!primaryEntry?.note && dayEntries.length > 1 ? `<div class="day-note">${dayEntries.length} saisies ce jour</div>` : ''}
                <span class="day-badge" style="background:${badgeBg};color:${badgeFg}">${badge}</span>`
             : `<div class="day-empty">${isWE ? '—' : '+ saisir'}</div>`
           }

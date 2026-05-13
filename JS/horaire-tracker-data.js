@@ -72,7 +72,7 @@ const Settings = (() => {
 function mkDate(daysAgo) {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+  return localISODate(d);
 }
 
 const SAMPLE_ENTRIES = [
@@ -96,6 +96,13 @@ function normalizeWeeklyHours(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_WEEKLY_HOURS;
   return parsed;
+}
+
+function localISODate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function weekKey(dateStr) {
@@ -282,5 +289,5 @@ function weekStart(offset = 0) {
 
 /** Date du jour en ISO YYYY-MM-DD */
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return localISODate(new Date());
 }
