@@ -91,7 +91,7 @@ const App = (() => {
     document.getElementById('fDate').value    = e?.date    || todayISO();
     document.getElementById('fArrive').value  = e?.arrive  || '';
     document.getElementById('fDepart').value  = e?.depart  || '';
-    document.getElementById('fPause').value   = e?.pause   ?? 60;
+    document.getElementById('fPause').value   = e?.pause   ?? 0;
     document.getElementById('fContrat').value = e?.contrat ?? Settings.getWeeklyHours();
     document.getElementById('fNote').value    = e?.note    || '';
 
