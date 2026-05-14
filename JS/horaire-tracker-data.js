@@ -594,14 +594,26 @@ const FirestoreSync = (() => {
 
     console.log('📡 Synchronisation vers Firestore...');
 
+    const failures = [];
     for (const entry of entries) {
       const docRef = firestore.collection(COLLECTION).doc(`${userId}_${entry.uid}`);
+      try {
+        await docRef.set({
+          userId,
+          ...entry,
+          updatedAt: entry.updatedAt || new Date().toISOString(),
+        }, { merge: true });
+      } catch (err) {
+        console.error(`✗ Erreur écriture Firestore pour uid=${entry.uid}:`, err);
+        failures.push({ uid: entry.uid, error: err });
+        // Ne pas continuer silencieusement — on collecte et on remonte après la boucle
+      }
+    }
 
-      await docRef.set({
-        userId,
-        ...entry,
-        updatedAt: entry.updatedAt || new Date().toISOString(),
-      }, { merge: true });
+    if (failures.length) {
+      console.error(`✗ ${failures.length} écritures Firestore ont échoué.`,
+        failures.slice(0, 5).map(f => ({ uid: f.uid, message: f.error?.message })));
+      throw new Error(`Échec écriture Firestore (${failures.length} entrées). Première erreur: ${failures[0].error?.message || 'inconnue'}`);
     }
 
     console.log(`✓ ${entries.length} entrées synchronisées sur Firestore`);
@@ -624,8 +636,13 @@ const FirestoreSync = (() => {
       const remoteEntries = remoteDocs.map(_remoteToEntry);
       const mergedEntries = mergeEntriesByUid(Store.getAll(), remoteEntries);
 
+      console.log(`SyncNow: pulled=${remoteEntries.length} remoteEntries, localBefore=${Store.getAll().length}`);
+      console.log('Sample remote uids:', remoteEntries.slice(0,6).map(r => r.uid));
+
       Store.replaceAll(mergedEntries);
       const pushResult = await syncToFirestore(mergedEntries);
+
+      console.log(`SyncNow: merged=${mergedEntries.length}, pushed=${pushResult.pushed || 0}`);
 
       return {
         pulled: remoteEntries.length,
@@ -633,7 +650,8 @@ const FirestoreSync = (() => {
         pushed: pushResult.pushed || 0,
       };
     } catch (error) {
-      console.error('✗ Erreur syncNow Firestore:', error);
+      console.error('✗ Erreur syncNow Firestore:', error && (error.stack || error.message || error));
+      // Ajouter détail visible dans la console et repropager l'erreur pour UI
       throw error;
     }
   }
