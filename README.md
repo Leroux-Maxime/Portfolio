@@ -112,9 +112,77 @@ Portfolio/
 │   ├── portfolio.js
 │   ├── horaire-tracker-data.js
 │   ├── horaire-tracker-ui.js
-│   └── horaire-tracker-app.js
+│   ├── horaire-tracker-app.js
+│   ├── horaire-tracker-firebase-config.js
+│   └── horaire-tracker-auth.js
 └── Images/
 ```
+
+---
+
+## Configuration Firebase (HoraireTracker)
+
+HoraireTracker supporte la synchronisation cloud via **Firebase + Firestore**. Cela vous permet de synchroniser vos horaires entre tous vos appareils.
+
+### Étapes de configuration
+
+#### 1. Créer un projet Firebase
+
+1. Allez sur [console.firebase.google.com](https://console.firebase.google.com/)
+2. Cliquez sur **Créer un projet**
+3. Nommez-le `horaires-tracker` (ou nom de votre choix)
+4. Acceptez les conditions et continuez
+
+#### 2. Activer Firestore
+
+1. Dans la console Firebase, allez sur **Firestore Database**
+2. Cliquez sur **Créer une base de données**
+3. Sélectionnez **Mode production**
+4. Choisissez une région proche de vous (par ex. `europe-west1`)
+
+#### 3. Activer l'authentification Google
+
+1. Allez sur **Authentication** → **Sign-in method**
+2. Cliquez sur **Google**
+3. Activez-le et cliquez sur **Enregistrer**
+
+#### 4. Récupérer votre config Firebase
+
+1. Allez sur **⚙️ Paramètres du projet** (roue dentée en haut à gauche)
+2. Onglet **Général** → faites défiler jusqu'à **Vos applications**
+3. Cliquez sur **</> Web** pour créer une app web
+4. Copiez la config `firebaseConfig`
+5. Remplacez la config dans `JS/horaire-tracker-firebase-config.js`
+
+#### 5. Configurer les règles Firestore
+
+1. Dans Firestore, allez sur **Règles**
+2. Remplacez par:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Chacun peut accéder à ses propres données
+    match /horaires/{document=**} {
+      allow read, write: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth.uid == request.resource.data.userId;
+    }
+    match /settings/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+  }
+}
+```
+
+3. Cliquez sur **Publier**
+
+### Utilisation
+
+- Cliquez sur **Se connecter** en haut à droite
+- Authentifiez-vous avec Google
+- Vos données se synchronisent automatiquement
+- Accédez à HoraireTracker depuis n'importe quel appareil avec le même compte Google
 
 ---
 

@@ -67,7 +67,38 @@ const Settings = (() => {
     return _weeklyHours;
   }
 
-  return { load, getWeeklyHours, setWeeklyHours };
+  async function loadFromFirestore() {
+    try {
+      if (!Auth.isAuthenticated()) return;
+
+      const userId = Auth.getCurrentUser().uid;
+      const docRef = firestore.collection('settings').doc(userId);
+      const doc = await docRef.get();
+
+      if (doc.exists) {
+        const data = doc.data();
+        _weeklyHours = Number(data.weeklyHours) || DEFAULT_WEEKLY_HOURS;
+        console.log('✓ Réglages chargés depuis Firestore');
+      }
+    } catch (error) {
+      console.error('✗ Erreur chargement réglages Firestore:', error);
+    }
+  }
+
+  async function saveToFirestore() {
+    try {
+      if (!Auth.isAuthenticated()) return;
+
+      const userId = Auth.getCurrentUser().uid;
+      const docRef = firestore.collection('settings').doc(userId);
+      await docRef.set({ weeklyHours: _weeklyHours }, { merge: true });
+      console.log('✓ Réglages sauvegardés sur Firestore');
+    } catch (error) {
+      console.error('✗ Erreur sauvegarde réglages Firestore:', error);
+    }
+  }
+
+  return { load, getWeeklyHours, setWeeklyHours, loadFromFirestore, saveToFirestore };
 })();
 
 /* ─── Données de démonstration ─── */
@@ -491,6 +522,70 @@ const Sync = (() => {
   }
 
   return { load, save, clear, getConfig, isEnabled, pullIntoStore, pushEntry, pushEntries, deleteEntry, syncNow };
+})();
+
+/**
+ * Firestore Sync - Extension pour synchroniser avec Firestore
+ */
+const FirestoreSync = (() => {
+  const COLLECTION = 'horaires';
+
+  async function loadFromFirestore() {
+    try {
+      if (!Auth.isAuthenticated()) {
+        console.log('⚠ Utilisateur non authentifié - chargement local');
+        return;
+      }
+
+      const userId = Auth.getCurrentUser().uid;
+      console.log('📡 Chargement depuis Firestore...');
+
+      const querySnapshot = await firestore.collection(COLLECTION).where('userId', '==', userId).get();
+      const entries = querySnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: parseInt(doc.data().id) || Math.random(),
+      }));
+
+      if (entries.length > 0) {
+        Store.replaceAll(entries);
+        console.log(`✓ ${entries.length} entrées chargées depuis Firestore`);
+      } else {
+        console.log('ℹ Aucune donnée trouvée sur Firestore');
+      }
+    } catch (error) {
+      console.error('✗ Erreur Firestore:', error);
+    }
+  }
+
+  async function syncToFirestore() {
+    try {
+      if (!Auth.isAuthenticated()) {
+        console.log('⚠ Utilisateur non authentifié - sync impossible');
+        return;
+      }
+
+      const userId = Auth.getCurrentUser().uid;
+      const entries = Store.getAll();
+
+      console.log('📡 Synchronisation vers Firestore...');
+
+      for (const entry of entries) {
+        const docRef = firestore.collection(COLLECTION).doc(`${userId}_${entry.uid}`);
+        
+        await docRef.set({
+          userId,
+          ...entry,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+      }
+
+      console.log(`✓ ${entries.length} entrées synchronisées sur Firestore`);
+    } catch (error) {
+      console.error('✗ Erreur sync Firestore:', error);
+    }
+  }
+
+  return { loadFromFirestore, syncToFirestore };
 })();
 
 /* ─── Helpers ─── */

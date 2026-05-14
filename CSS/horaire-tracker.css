@@ -138,7 +138,35 @@ body.modal-open { overflow: hidden; }
 
 .topbar h1 { font-size: 22px; font-weight: 600; letter-spacing: -.3px; }
 .text-muted { font-size: 13px; color: var(--text-2); margin-top: 3px; }
-.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ── AUTH CONTAINER ── */
+.auth-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* ── KPI STATS ── */
 .stats-row {

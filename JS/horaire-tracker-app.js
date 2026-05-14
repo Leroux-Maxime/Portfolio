@@ -12,15 +12,22 @@ const App = (() => {
 
   /* ── Init ── */
   function init() {
-    Settings.load();
-    Sync.load();
-    Store.load();
+    // Si utilisateur authentifié, les données sont déjà chargées par Auth
+    if (!Auth.isAuthenticated()) {
+      Settings.load();
+      Sync.load();
+      Store.load();
+    }
+    
     _setView('week');
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    if (Sync.isEnabled()) {
+    if (!Auth.isAuthenticated() && Sync.isEnabled()) {
       void _syncFromCloud();
     }
+    
+    // Afficher les données
+    _refresh();
   }
 
   /* ── Navigation ── */
@@ -69,6 +76,19 @@ const App = (() => {
   }
 
   async function syncNow() {
+    // Si utilisateur authentifié, utiliser Firebase
+    if (Auth.isAuthenticated()) {
+      try {
+        await FirestoreSync.syncToFirestore();
+        alert('✓ Synchronisation Firestore terminée.');
+      } catch (err) {
+        console.error('Erreur sync:', err);
+        alert('✗ Erreur de synchronisation: ' + err.message);
+      }
+      return;
+    }
+
+    // Sinon, utiliser Supabase
     if (!Sync.isEnabled()) {
       configureSync();
       return;
@@ -176,7 +196,12 @@ const App = (() => {
     closeModal();
     _refresh();
 
-    if (savedEntry && Sync.isEnabled()) {
+    // Sync Firebase
+    if (Auth.isAuthenticated()) {
+      void FirestoreSync.syncToFirestore().catch(err => console.error('Firebase sync error:', err));
+    }
+    // Sync Supabase
+    else if (savedEntry && Sync.isEnabled()) {
       void Sync.pushEntry(savedEntry).catch(err => console.error('HoraireTracker: sync écriture impossible', err));
     }
   }
@@ -189,7 +214,12 @@ const App = (() => {
     Store.remove(id);
     _refresh();
 
-    if (Sync.isEnabled()) {
+    // Sync Firebase
+    if (Auth.isAuthenticated()) {
+      void FirestoreSync.syncToFirestore().catch(err => console.error('Firebase sync error:', err));
+    }
+    // Sync Supabase
+    else if (Sync.isEnabled()) {
       void Sync.deleteEntry(e).catch(err => console.error('HoraireTracker: sync suppression impossible', err));
     }
   }
