@@ -224,6 +224,20 @@ git push origin main
 
 Si vous voulez que je prépare et pousse le commit pour vous, donnez-moi le nom du dépôt GitHub (ex. `OniZurKa/Portfolio`) et je créerai le commit localement ici pour que vous le poussiez, ou je vous fournis la commande complète à exécuter.
 
+## Déployer les règles Firestore
+
+Un fichier `firestore.rules` est fourni à la racine du dépôt. Pour appliquer ces règles sur votre projet Firebase, utilisez le script helper :
+
+```bash
+npm install -g firebase-tools    # si nécessaire
+firebase login
+./scripts/deploy-firestore-rules.sh <your-firebase-project-id>
+# ex: ./scripts/deploy-firestore-rules.sh horaires-f3862
+```
+
+Cela déploiera les règles contenues dans `firestore.rules`. Vérifiez ensuite la console Firebase → Firestore → Rules.
+
+Si vous préférez éditer manuellement dans la console Firebase (Firestore → Rules), copiez le contenu de `firestore.rules`. Un bloc commenté dans ce fichier propose aussi une option permissive pour debug rapide (ne pas laisser en production).
 
 ## Contact
 
