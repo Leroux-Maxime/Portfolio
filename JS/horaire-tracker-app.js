@@ -80,10 +80,10 @@ const App = (() => {
     if (Auth.isAuthenticated()) {
       try {
         setSyncStatus('syncing', 'Synchro: en cours...');
-        await FirestoreSync.syncNow();
+        const result = await FirestoreSync.syncNow();
         _refresh();
         setSyncStatus('success', `Synchro: OK (${timeNowLabel()})`);
-        alert('✓ Synchronisation Firestore terminée.');
+        alert(`✓ Synchronisation Firestore terminée. (${result.pulled} cloud / ${result.merged} fusionnées)`);
       } catch (err) {
         console.error('Erreur sync:', err);
         setSyncStatus('error', 'Synchro: erreur');
@@ -206,7 +206,7 @@ const App = (() => {
     // Sync Firebase
     if (Auth.isAuthenticated()) {
       setSyncStatus('syncing', 'Synchro: en cours...');
-      void FirestoreSync.syncToFirestore()
+      void FirestoreSync.syncNow()
         .then(() => setSyncStatus('success', `Synchro: OK (${timeNowLabel()})`))
         .catch(err => {
           console.error('Firebase sync error:', err);

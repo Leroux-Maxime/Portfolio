@@ -585,62 +585,57 @@ const FirestoreSync = (() => {
   }
 
   async function syncToFirestore(entries = Store.getAll()) {
-    try {
-      if (!Auth.isAuthenticated()) {
-        console.log('⚠ Utilisateur non authentifié - sync impossible');
-        return { pushed: 0 };
-      }
-
-      const userId = _userId();
-
-      console.log('📡 Synchronisation vers Firestore...');
-
-      for (const entry of entries) {
-        const docRef = firestore.collection(COLLECTION).doc(`${userId}_${entry.uid}`);
-
-        await docRef.set({
-          userId,
-          ...entry,
-          updatedAt: entry.updatedAt || new Date().toISOString(),
-        }, { merge: true });
-      }
-
-      console.log(`✓ ${entries.length} entrées synchronisées sur Firestore`);
-      return { pushed: entries.length };
-    } catch (error) {
-      console.error('✗ Erreur sync Firestore:', error);
-      return { pushed: 0, error: true };
+    if (!Auth.isAuthenticated()) {
+      console.log('⚠ Utilisateur non authentifié - sync impossible');
+      return { pushed: 0 };
     }
+
+    const userId = _userId();
+
+    console.log('📡 Synchronisation vers Firestore...');
+
+    for (const entry of entries) {
+      const docRef = firestore.collection(COLLECTION).doc(`${userId}_${entry.uid}`);
+
+      await docRef.set({
+        userId,
+        ...entry,
+        updatedAt: entry.updatedAt || new Date().toISOString(),
+      }, { merge: true });
+    }
+
+    console.log(`✓ ${entries.length} entrées synchronisées sur Firestore`);
+    return { pushed: entries.length };
   }
 
   async function deleteEntry(entry) {
-    try {
-      if (!Auth.isAuthenticated() || !entry?.uid) return { deleted: 0 };
-      const userId = _userId();
-      await firestore.collection(COLLECTION).doc(`${userId}_${entry.uid}`).delete();
-      return { deleted: 1 };
-    } catch (error) {
-      console.error('✗ Erreur suppression Firestore:', error);
-      return { deleted: 0, error: true };
-    }
+    if (!Auth.isAuthenticated() || !entry?.uid) return { deleted: 0 };
+    const userId = _userId();
+    await firestore.collection(COLLECTION).doc(`${userId}_${entry.uid}`).delete();
+    return { deleted: 1 };
   }
 
   async function syncNow() {
     if (!Auth.isAuthenticated()) return { skipped: true };
 
-    const userId = _userId();
-    const remoteDocs = await _fetchRemoteDocs(userId);
-    const remoteEntries = remoteDocs.map(_remoteToEntry);
-    const mergedEntries = mergeEntriesByUid(Store.getAll(), remoteEntries);
+    try {
+      const userId = _userId();
+      const remoteDocs = await _fetchRemoteDocs(userId);
+      const remoteEntries = remoteDocs.map(_remoteToEntry);
+      const mergedEntries = mergeEntriesByUid(Store.getAll(), remoteEntries);
 
-    Store.replaceAll(mergedEntries);
-    const pushResult = await syncToFirestore(mergedEntries);
+      Store.replaceAll(mergedEntries);
+      const pushResult = await syncToFirestore(mergedEntries);
 
-    return {
-      pulled: remoteEntries.length,
-      merged: mergedEntries.length,
-      pushed: pushResult.pushed || 0,
-    };
+      return {
+        pulled: remoteEntries.length,
+        merged: mergedEntries.length,
+        pushed: pushResult.pushed || 0,
+      };
+    } catch (error) {
+      console.error('✗ Erreur syncNow Firestore:', error);
+      throw error;
+    }
   }
 
   return { loadFromFirestore, syncToFirestore, deleteEntry, syncNow };
