@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HoraireTracker — Suivi de mes horaires</title>
+  <meta name="description" content="Application de suivi des horaires de travail — vérifiez votre fiche de paie chaque mois." />
+
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+  <!-- Firebase (v9 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="CSS/horaire-tracker.css" />
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <i class="ti ti-clock" aria-hidden="true"></i>
+        <span>HoraireTracker</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="week" onclick="App.setView('week', this)">
+          <i class="ti ti-calendar-week" aria-hidden="true"></i>
+          <span>Semaine</span>
+        </button>
+        <button class="nav-item" data-view="list" onclick="App.setView('list', this)">
+          <i class="ti ti-list" aria-hidden="true"></i>
+          <span>Journal</span>
+        </button>
+        <button class="nav-item" data-view="month" onclick="App.setView('month', this)">
+          <i class="ti ti-calendar" aria-hidden="true"></i>
+          <span>Récap mois</span>
+        </button>
+        <button class="nav-item" data-view="charts" onclick="App.setView('charts', this)">
+          <i class="ti ti-chart-bar" aria-hidden="true"></i>
+          <span>Graphiques</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline btn-sm" onclick="App.exportCSV()">
+          <i class="ti ti-download" aria-hidden="true"></i>
+          Export CSV
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <main class="main">
+
+      <!-- Top bar -->
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Mes horaires</h1>
+          <p id="subline" class="text-muted">Chargement…</p>
+        </div>
+        <div class="topbar-actions">
+          <div id="syncStatus" class="sync-status neutral" aria-live="polite">Synchro: non lancée</div>
+          <div id="authContainer" class="auth-container" style="display: none;">
+            <img id="userAvatar" src="" alt="Avatar" class="user-avatar" />
+            <span id="userName" class="user-name"></span>
+            <button class="btn btn-outline btn-sm" onclick="Auth.logout()">
+              <i class="ti ti-logout" aria-hidden="true"></i>
+            </button>
+          </div>
+          <button id="loginBtn" class="btn btn-primary" onclick="Auth.loginWithGoogle()" style="display: none;">
+            <i class="ti ti-brand-google" aria-hidden="true"></i>
+            Se connecter
+          </button>
+          <button class="btn btn-primary" onclick="App.openModal()">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+            Ajouter une journée
+          </button>
+          <button class="btn btn-outline" onclick="App.syncNow()">
+            <i class="ti ti-cloud-sync" aria-hidden="true"></i>
+            Synchroniser
+          </button>
+        </div>
+      </header>
+
+      <!-- KPI row -->
+      <div class="stats-row" id="statsRow"></div>
+
+      <!-- ── WEEK VIEW ── -->
+      <section id="view-week" class="view active">
+        <div class="week-nav">
+          <button class="btn btn-sm" onclick="App.shiftWeek(-1)">
+            <i class="ti ti-chevron-left" aria-hidden="true"></i>
+          </button>
+          <span id="weekLabel" class="week-label"></span>
+          <button class="btn btn-sm" onclick="App.shiftWeek(1)">
+            <i class="ti ti-chevron-right" aria-hidden="true"></i>
+          </button>
+          <button class="btn btn-sm" onclick="App.goToday()">Aujourd'hui</button>
+        </div>
+        <div class="week-grid" id="weekGrid"></div>
+        <div class="summary-row" id="weekSummary"></div>
+      </section>
+
+      <!-- ── LIST VIEW ── -->
+      <section id="view-list" class="view">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <input type="text" id="searchInput" placeholder="Rechercher…" oninput="App.renderList()" />
+          </div>
+          <select id="filterMonth" onchange="App.renderList()">
+            <option value="">Tous les mois</option>
+          </select>
+          <select id="filterType" onchange="App.renderList()">
+            <option value="">Tous les états</option>
+            <option>Normal</option>
+            <option>Heure sup.</option>
+          </select>
+        </div>
+        <div class="entries" id="listView"></div>
+      </section>
+
+      <!-- ── MONTH VIEW ── -->
+      <section id="view-month" class="view">
+        <div class="toolbar">
+          <select id="monthSelect" onchange="App.renderMonth()" style="width:auto"></select>
+        </div>
+        <div id="monthContent"></div>
+      </section>
+
+      <!-- ── CHARTS VIEW ── -->
+      <section id="view-charts" class="view">
+        <div class="chart-card">
+          <h3>Heures travaillées par semaine vs taux hebdo</h3>
+          <div class="chart-wrap" style="height:220px">
+            <canvas id="chartWeeks" role="img" aria-label="Heures travaillées par semaine comparées au taux hebdomadaire"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>Répartition par type de journée</h3>
+          <div class="chart-legend" id="typeLegend"></div>
+          <div class="chart-wrap" style="height:200px">
+            <canvas id="chartType" role="img" aria-label="Répartition des types de journées de travail"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>Delta cumulé — heures réelles vs contrat</h3>
+          <div class="chart-wrap" style="height:200px">
+            <canvas id="chartDelta" role="img" aria-label="Écart cumulé entre heures réelles et contractuelles"></canvas>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Navigation mobile">
+    <button class="mobile-nav-item active" data-view="week" onclick="App.setView('week', this)">
+      <i class="ti ti-calendar-week" aria-hidden="true"></i>
+      <span>Semaine</span>
+    </button>
+    <button class="mobile-nav-item" data-view="list" onclick="App.setView('list', this)">
+      <i class="ti ti-list" aria-hidden="true"></i>
+      <span>Journal</span>
+    </button>
+    <button class="mobile-nav-item mobile-nav-action" onclick="App.openModal()" aria-label="Ajouter une journée">
+      <i class="ti ti-plus" aria-hidden="true"></i>
+      <span>Ajouter</span>
+    </button>
+    <button class="mobile-nav-item" data-view="month" onclick="App.setView('month', this)">
+      <i class="ti ti-calendar" aria-hidden="true"></i>
+      <span>Mois</span>
+    </button>
+    <button class="mobile-nav-item" data-view="charts" onclick="App.setView('charts', this)">
+      <i class="ti ti-chart-bar" aria-hidden="true"></i>
+      <span>Graph.</span>
+    </button>
+  </nav>
+
+  <!-- ── MODAL ── -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="App.closeModalBg(event)" role="dialog" aria-modal="true" aria-labelledby="modalTitleText">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitleText">Nouvelle journée</h2>
+        <button class="btn-icon" onclick="App.closeModal()" aria-label="Fermer">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-field">
+            <label for="fDate">Date <span class="required">*</span></label>
+            <input id="fDate" type="date" />
+          </div>
+          <div class="form-field">
+            <label>Détection automatique</label>
+            <div style="font-size:13px;color:var(--text-2);padding:0.6rem 0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+              L'app calcule automatiquement l'heure sup. à partir de votre taux hebdomadaire.
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="fArrive">Heure d'arrivée</label>
+            <input id="fArrive" type="time" />
+          </div>
+          <div class="form-field">
+            <label for="fDepart">Heure de départ</label>
+            <input id="fDepart" type="time" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="fPause">Pause (minutes)</label>
+            <input id="fPause" type="number" placeholder="60" min="0" max="480" />
+          </div>
+          <div class="form-field">
+            <label for="fContrat">Heures par semaine</label>
+            <input id="fContrat" type="number" placeholder="35" step="0.5" min="0" />
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="fNote">Note</label>
+          <textarea id="fNote" rows="2" placeholder="Télétravail, réunion d'équipe, déplacement…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="App.closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="App.saveEntry()">
+          <i class="ti ti-check" aria-hidden="true"></i>
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App scripts -->
+  <script src="JS/horaire-tracker-firebase-config.js"></script>
+  <script src="JS/horaire-tracker-auth.js"></script>
+  <script src="JS/horaire-tracker-data.js"></script>
+  <script src="JS/horaire-tracker-ui.js"></script>
+  <script src="JS/horaire-tracker-app.js"></script>
+
+</body>
+</html>
