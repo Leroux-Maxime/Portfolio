@@ -158,6 +158,12 @@ body.modal-open { overflow: hidden; }
   object-fit: cover;
 }
 
+.user-avatar {
+  display: inline-block;
+  border: 2px solid rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
 .user-name {
   font-size: 13px;
   font-weight: 500;

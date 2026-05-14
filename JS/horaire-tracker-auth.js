@@ -64,6 +64,16 @@ const Auth = (() => {
       return result.user;
     } catch (error) {
       console.error('✗ Erreur de connexion:', error);
+      // Cas fréquent : domaine non autorisé pour OAuth
+      if (error && error.code === 'auth/unauthorized-domain') {
+        const projectId = (typeof firebaseConfig !== 'undefined' && firebaseConfig.projectId) ? firebaseConfig.projectId : '(votre-projet)';
+        const msg = `Erreur: domaine non autorisé pour OAuth.\n\nAjoutez 'localhost' (ou votre domaine) dans Firebase Console → Authentication → Authorized domains.`;
+        alert(msg);
+        // Ouvrir la page d'auth providers dans la console Firebase pour aide rapide
+        try { window.open(`https://console.firebase.google.com/project/${projectId}/authentication/providers`, '_blank'); } catch (e) { /* ignore */ }
+        return null;
+      }
+
       alert('Erreur de connexion: ' + error.message);
       return null;
     }
@@ -100,11 +110,47 @@ const Auth = (() => {
     if (user) {
       authContainer.style.display = 'flex';
       loginBtn.style.display = 'none';
-      
-      userAvatar.src = user.photoURL || _getDefaultAvatar(user.email);
-      userName.textContent = user.displayName || user.email.split('@')[0];
-      
-      // Ajouter classe pour CSS
+
+      // Nom
+      userName.textContent = user.displayName || (user.email ? user.email.split('@')[0] : 'Utilisateur');
+
+      // Avatar: définir alt, policy et fallback (sensible pour Safari)
+      userAvatar.alt = user.displayName || user.email || 'Avatar';
+      userAvatar.referrerPolicy = 'no-referrer';
+      try { userAvatar.crossOrigin = 'anonymous'; } catch (e) { /* ignore */ }
+
+      // Handler onload/onerror
+      let _avatarTimer = null;
+      userAvatar.onload = () => {
+        if (_avatarTimer) { clearTimeout(_avatarTimer); _avatarTimer = null; }
+        // image chargée correctement
+      };
+      userAvatar.onerror = () => {
+        userAvatar.onerror = null;
+        userAvatar.src = _getDefaultAvatar(user.email || (user.uid || Math.random()));
+      };
+
+      // Assign source ou fallback
+      if (user.photoURL) {
+        // tenter la photo Google (ajout taille suggérée)
+        try {
+          userAvatar.src = user.photoURL + (user.photoURL.includes('?') ? '&' : '?') + 'sz=128';
+        } catch (e) {
+          userAvatar.src = _getDefaultAvatar(user.email || (user.uid || Math.random()));
+        }
+      } else {
+        userAvatar.src = _getDefaultAvatar(user.email || (user.uid || Math.random()));
+      }
+
+      // Fallback si l'image met trop de temps à charger (ex: bloquée par Safari)
+      _avatarTimer = setTimeout(() => {
+        if (!userAvatar.complete || userAvatar.naturalWidth === 0) {
+          userAvatar.src = _getDefaultAvatar(user.email || (user.uid || Math.random()));
+        }
+      }, 2500);
+
+      // Forcer l'affichage et ajouter classe pour CSS
+      userAvatar.style.display = 'block';
       document.body.classList.add('authenticated');
     } else {
       authContainer.style.display = 'none';

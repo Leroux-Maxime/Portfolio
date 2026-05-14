@@ -186,6 +186,45 @@ service cloud.firestore {
 
 ---
 
+## Debug: erreur `auth/unauthorized-domain`
+
+Si vous voyez l'erreur "Firebase: This domain is not authorized for OAuth operations (auth/unauthorized-domain)", ajoutez ces domaines dans la console Firebase → Authentication → Authorized domains :
+
+- `localhost`
+- `127.0.0.1`
+- `localhost:8000` (optionnel, `localhost` suffit pour tous les ports)
+- `OniZurKa.github.io` (remplacez par votre nom d'utilisateur GitHub)
+- Votre domaine personnalisé si applicable (ex. `monsite.com`)
+
+Pour tester localement facilement, utilisez le script fourni :
+
+```bash
+./scripts/serve-local.sh 8000
+# ouvre automatiquement http://localhost:8000/horaires.html
+```
+
+Après avoir ajouté les domaines, rechargez la page et réessayez la connexion Google.
+
+### Déploiement automatique sur GitHub Pages
+
+Un workflow GitHub Actions a été ajouté pour déployer automatiquement le contenu du dépôt sur la branche `gh-pages` lorsque vous poussez sur la branche `main`.
+
+Pour activer :
+
+1. Poussez vos changements sur `main` :
+
+```bash
+git add .
+git commit -m "Add GitHub Pages deploy workflow"
+git push origin main
+```
+
+2. Attendez la fin de l'exécution GitHub Actions (Actions → Deploy to GitHub Pages).
+3. Dans les paramètres du dépôt (Settings → Pages), choisissez la source `gh-pages` branch si nécessaire — GitHub peut aussi activer automatiquement la page.
+
+Si vous voulez que je prépare et pousse le commit pour vous, donnez-moi le nom du dépôt GitHub (ex. `OniZurKa/Portfolio`) et je créerai le commit localement ici pour que vous le poussiez, ou je vous fournis la commande complète à exécuter.
+
+
 ## Contact
 
 - Email: <a href="mailto:maximeleroux99@gmail.com">maximeleroux99@gmail.com</a>
