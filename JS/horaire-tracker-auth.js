@@ -103,11 +103,11 @@ const Auth = (() => {
 
   /* ── Getter ── */
   function getCurrentUser() {
-    return _currentUser;
+    return _currentUser || firebaseAuth.currentUser || null;
   }
 
   function isAuthenticated() {
-    return _currentUser !== null;
+    return Boolean(getCurrentUser());
   }
 
   /* ── UI Mise à jour ── */
