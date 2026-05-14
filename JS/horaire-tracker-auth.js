@@ -7,6 +7,7 @@ const Auth = (() => {
 
   let _currentUser = null;
   let _unsubscribe = null;
+  let _autoSyncTimer = null;
 
   /* ── Initialisation ── */
   function init() {
@@ -25,17 +26,22 @@ const Auth = (() => {
     try {
       if (user) {
         console.log('✓ Utilisateur connecté:', user.email);
-        
-        // Charger les données depuis Firestore
-        await FirestoreSync.loadFromFirestore();
+
+        // Charger et fusionner les données cloud/local puis republier l'état fusionné
+        if (window.App?.setSyncStatus) {
+          App.setSyncStatus('syncing', 'Synchro: en cours...');
+        }
+        await FirestoreSync.syncNow();
+        if (window.App?.setSyncStatus) {
+          App.setSyncStatus('success', `Synchro: OK (${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })})`);
+        }
         await Settings.loadFromFirestore();
         
-        // Démarrer la synchro automatique
-        if (Sync.isEnabled()) {
-          _startAutoSync();
-        }
+        // Démarrer la synchro automatique Firebase
+        _startAutoSync();
       } else {
         console.log('✗ Utilisateur déconnecté');
+        _stopAutoSync();
         
         // Charger les données locales en fallback
         Store.load();
@@ -170,12 +176,33 @@ const Auth = (() => {
 
   /* ── Auto-sync ── */
   function _startAutoSync() {
+    if (_autoSyncTimer) return;
     // Sync toutes les 30 secondes
-    setInterval(() => {
+    _autoSyncTimer = setInterval(() => {
       if (isAuthenticated()) {
-        FirestoreSync.syncToFirestore();
+        if (window.App?.setSyncStatus) {
+          App.setSyncStatus('syncing', 'Synchro: en cours...');
+        }
+        FirestoreSync.syncNow()
+          .then(() => {
+            if (window.App?.setSyncStatus) {
+              App.setSyncStatus('success', `Synchro: OK (${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })})`);
+            }
+          })
+          .catch(() => {
+            if (window.App?.setSyncStatus) {
+              App.setSyncStatus('error', 'Synchro: erreur');
+            }
+          });
       }
     }, 30000);
+  }
+
+  function _stopAutoSync() {
+    if (_autoSyncTimer) {
+      clearInterval(_autoSyncTimer);
+      _autoSyncTimer = null;
+    }
   }
 
   /* ── Public API ── */

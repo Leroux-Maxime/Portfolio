@@ -79,10 +79,14 @@ const App = (() => {
     // Si utilisateur authentifié, utiliser Firebase
     if (Auth.isAuthenticated()) {
       try {
-        await FirestoreSync.syncToFirestore();
+        setSyncStatus('syncing', 'Synchro: en cours...');
+        await FirestoreSync.syncNow();
+        _refresh();
+        setSyncStatus('success', `Synchro: OK (${timeNowLabel()})`);
         alert('✓ Synchronisation Firestore terminée.');
       } catch (err) {
         console.error('Erreur sync:', err);
+        setSyncStatus('error', 'Synchro: erreur');
         alert('✗ Erreur de synchronisation: ' + err.message);
       }
       return;
@@ -190,6 +194,9 @@ const App = (() => {
     };
 
     Settings.setWeeklyHours(data.contrat);
+    if (Auth.isAuthenticated()) {
+      void Settings.saveToFirestore().catch(err => console.error('Firebase settings sync error:', err));
+    }
 
     const savedEntry = _editingId ? Store.update(_editingId, data) : Store.add(data);
 
@@ -198,7 +205,13 @@ const App = (() => {
 
     // Sync Firebase
     if (Auth.isAuthenticated()) {
-      void FirestoreSync.syncToFirestore().catch(err => console.error('Firebase sync error:', err));
+      setSyncStatus('syncing', 'Synchro: en cours...');
+      void FirestoreSync.syncToFirestore()
+        .then(() => setSyncStatus('success', `Synchro: OK (${timeNowLabel()})`))
+        .catch(err => {
+          console.error('Firebase sync error:', err);
+          setSyncStatus('error', 'Synchro: erreur');
+        });
     }
     // Sync Supabase
     else if (savedEntry && Sync.isEnabled()) {
@@ -216,7 +229,14 @@ const App = (() => {
 
     // Sync Firebase
     if (Auth.isAuthenticated()) {
-      void FirestoreSync.syncToFirestore().catch(err => console.error('Firebase sync error:', err));
+      setSyncStatus('syncing', 'Synchro: en cours...');
+      void FirestoreSync.deleteEntry(e)
+        .then(() => FirestoreSync.syncNow())
+        .then(() => setSyncStatus('success', `Synchro: OK (${timeNowLabel()})`))
+        .catch(err => {
+          console.error('Firebase sync error:', err);
+          setSyncStatus('error', 'Synchro: erreur');
+        });
     }
     // Sync Supabase
     else if (Sync.isEnabled()) {
@@ -239,6 +259,27 @@ const App = (() => {
   /* ── Internal refresh ── */
   function _refresh() {
     _setView(_currentView);
+  }
+
+  function timeNowLabel() {
+    return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function setSyncStatus(state = 'neutral', text = 'Synchro: non lancée') {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+
+    const icons = {
+      neutral: 'ti ti-cloud',
+      syncing: 'ti ti-loader-2',
+      success: 'ti ti-check',
+      error: 'ti ti-alert-triangle',
+    };
+
+    const iconClass = icons[state] || icons.neutral;
+    el.classList.remove('neutral', 'syncing', 'success', 'error');
+    el.classList.add(state);
+    el.innerHTML = `<i class="${iconClass}" aria-hidden="true"></i><span>${text}</span>`;
   }
 
   async function _syncFromCloud() {
@@ -266,6 +307,7 @@ const App = (() => {
     exportCSV,
     syncNow,
     configureSync,
+    setSyncStatus,
     get weekOffset() { return weekOffset; },
   };
 

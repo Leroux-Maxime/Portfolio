@@ -530,62 +530,120 @@ const Sync = (() => {
 const FirestoreSync = (() => {
   const COLLECTION = 'horaires';
 
+  function _userId() {
+    return Auth.getCurrentUser()?.uid || null;
+  }
+
+  async function _fetchRemoteDocs(userId) {
+    const snap = await firestore.collection(COLLECTION).where('userId', '==', userId).get();
+    return snap.docs.map(doc => ({
+      docId: doc.id,
+      ...doc.data(),
+    }));
+  }
+
+  function _remoteToEntry(row) {
+    return normalizeEntry({
+      uid: row.uid,
+      id: Number(row.id) || 0,
+      date: row.date,
+      type: row.type || 'Normal',
+      arrive: row.arrive || '',
+      depart: row.depart || '',
+      pause: Number(row.pause) || 0,
+      contrat: normalizeWeeklyHours(row.contrat),
+      note: row.note || '',
+      updatedAt: row.updatedAt || '1970-01-01T00:00:00.000Z',
+    });
+  }
+
   async function loadFromFirestore() {
     try {
       if (!Auth.isAuthenticated()) {
         console.log('⚠ Utilisateur non authentifié - chargement local');
-        return;
+        return { pulled: 0, local: Store.getAll().length };
       }
 
-      const userId = Auth.getCurrentUser().uid;
+      const userId = _userId();
       console.log('📡 Chargement depuis Firestore...');
 
-      const querySnapshot = await firestore.collection(COLLECTION).where('userId', '==', userId).get();
-      const entries = querySnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: parseInt(doc.data().id) || Math.random(),
-      }));
+      const remoteDocs = await _fetchRemoteDocs(userId);
+      const remoteEntries = remoteDocs.map(_remoteToEntry);
+      const mergedEntries = mergeEntriesByUid(Store.getAll(), remoteEntries);
 
-      if (entries.length > 0) {
-        Store.replaceAll(entries);
-        console.log(`✓ ${entries.length} entrées chargées depuis Firestore`);
-      } else {
+      if (!remoteEntries.length) {
         console.log('ℹ Aucune donnée trouvée sur Firestore');
       }
+
+      Store.replaceAll(mergedEntries);
+      console.log(`✓ ${remoteEntries.length} entrées cloud fusionnées (${mergedEntries.length} total local)`);
+      return { pulled: remoteEntries.length, local: mergedEntries.length };
     } catch (error) {
       console.error('✗ Erreur Firestore:', error);
+      return { pulled: 0, local: Store.getAll().length, error: true };
     }
   }
 
-  async function syncToFirestore() {
+  async function syncToFirestore(entries = Store.getAll()) {
     try {
       if (!Auth.isAuthenticated()) {
         console.log('⚠ Utilisateur non authentifié - sync impossible');
-        return;
+        return { pushed: 0 };
       }
 
-      const userId = Auth.getCurrentUser().uid;
-      const entries = Store.getAll();
+      const userId = _userId();
 
       console.log('📡 Synchronisation vers Firestore...');
 
       for (const entry of entries) {
         const docRef = firestore.collection(COLLECTION).doc(`${userId}_${entry.uid}`);
-        
+
         await docRef.set({
           userId,
           ...entry,
-          updatedAt: new Date().toISOString(),
+          updatedAt: entry.updatedAt || new Date().toISOString(),
         }, { merge: true });
       }
 
       console.log(`✓ ${entries.length} entrées synchronisées sur Firestore`);
+      return { pushed: entries.length };
     } catch (error) {
       console.error('✗ Erreur sync Firestore:', error);
+      return { pushed: 0, error: true };
     }
   }
 
-  return { loadFromFirestore, syncToFirestore };
+  async function deleteEntry(entry) {
+    try {
+      if (!Auth.isAuthenticated() || !entry?.uid) return { deleted: 0 };
+      const userId = _userId();
+      await firestore.collection(COLLECTION).doc(`${userId}_${entry.uid}`).delete();
+      return { deleted: 1 };
+    } catch (error) {
+      console.error('✗ Erreur suppression Firestore:', error);
+      return { deleted: 0, error: true };
+    }
+  }
+
+  async function syncNow() {
+    if (!Auth.isAuthenticated()) return { skipped: true };
+
+    const userId = _userId();
+    const remoteDocs = await _fetchRemoteDocs(userId);
+    const remoteEntries = remoteDocs.map(_remoteToEntry);
+    const mergedEntries = mergeEntriesByUid(Store.getAll(), remoteEntries);
+
+    Store.replaceAll(mergedEntries);
+    const pushResult = await syncToFirestore(mergedEntries);
+
+    return {
+      pulled: remoteEntries.length,
+      merged: mergedEntries.length,
+      pushed: pushResult.pushed || 0,
+    };
+  }
+
+  return { loadFromFirestore, syncToFirestore, deleteEntry, syncNow };
 })();
 
 /* ─── Helpers ─── */

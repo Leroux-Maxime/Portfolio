@@ -140,6 +140,55 @@ body.modal-open { overflow: hidden; }
 .text-muted { font-size: 13px; color: var(--text-2); margin-top: 3px; }
 .topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
+.sync-status {
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+}
+
+.sync-status i {
+  font-size: 14px;
+}
+
+.sync-status.syncing i {
+  animation: sync-spin 1s linear infinite;
+}
+
+@keyframes sync-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sync-status.syncing {
+  background: #eef3ff;
+  color: #3454a3;
+  border-color: rgba(52, 84, 163, .25);
+}
+
+.sync-status.success {
+  background: #eaf3de;
+  color: #27500a;
+  border-color: rgba(39, 80, 10, .25);
+}
+
+.sync-status.error {
+  background: #fcebeb;
+  color: #791f1f;
+  border-color: rgba(121, 31, 31, .25);
+}
+
+.sync-status.neutral {
+  background: var(--surface2);
+  color: var(--text-2);
+}
+
 /* ── AUTH CONTAINER ── */
 .auth-container {
   display: flex;
