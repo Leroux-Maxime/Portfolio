@@ -179,7 +179,7 @@ const App = (() => {
     if (e.target === document.getElementById('modalBackdrop')) closeModal();
   }
 
-  function saveEntry() {
+  async function saveEntry() {
     const date = document.getElementById('fDate').value;
     if (!date) { alert('La date est obligatoire.'); return; }
 
@@ -201,21 +201,33 @@ const App = (() => {
     const savedEntry = _editingId ? Store.update(_editingId, data) : Store.add(data);
 
     closeModal();
-    _refresh();
+
+    let refreshError = null;
+    try {
+      _refresh();
+    } catch (err) {
+      refreshError = err;
+      console.error('Erreur rafraîchissement après sauvegarde:', err);
+    }
 
     // Sync Firebase
-    if (Auth.isAuthenticated()) {
+    if (Auth.isAuthenticated() || Boolean(Auth.getCurrentUser?.())) {
       setSyncStatus('syncing', 'Synchro: en cours...');
-      void FirestoreSync.syncNow()
-        .then(() => setSyncStatus('success', `Synchro: OK (${timeNowLabel()})`))
-        .catch(err => {
-          console.error('Firebase sync error:', err);
-          setSyncStatus('error', 'Synchro: erreur');
-        });
+      try {
+        await FirestoreSync.syncNow();
+        setSyncStatus('success', `Synchro: OK (${timeNowLabel()})`);
+      } catch (err) {
+        console.error('Firebase sync error:', err);
+        setSyncStatus('error', 'Synchro: erreur');
+      }
     }
     // Sync Supabase
     else if (savedEntry && Sync.isEnabled()) {
       void Sync.pushEntry(savedEntry).catch(err => console.error('HoraireTracker: sync écriture impossible', err));
+    }
+
+    if (refreshError) {
+      throw refreshError;
     }
   }
 
