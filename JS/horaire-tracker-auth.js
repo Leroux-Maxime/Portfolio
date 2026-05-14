@@ -27,6 +27,10 @@ const Auth = (() => {
       if (user) {
         console.log('✓ Utilisateur connecté:', user.email);
 
+        // Toujours charger le local avant de fusionner avec le cloud
+        Store.load();
+        Settings.load();
+
         // Charger et fusionner les données cloud/local puis republier l'état fusionné
         if (window.App?.setSyncStatus) {
           App.setSyncStatus('syncing', 'Synchro: en cours...');
